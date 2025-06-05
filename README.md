@@ -122,16 +122,6 @@ And then configure Claude by editing `claude_desktop_config.json`:
 }
 ```
 
-## Protocol Compliance
-
-This library implements the complete MCP specification:
-
-- **Initialization**: Proper protocol version negotiation and capability exchange
-- **JSON-RPC 2.0**: Full request/response/notification support with error handling
-- **Capability Objects**: Correct capability format with sub-capabilities
-- **Pagination**: Cursor-based pagination for scalable list operations
-- **Type Safety**: All MCP types are properly modeled in Haskell's type system
-
 ## Documentation
 
 - [MCP Specification](https://modelcontextprotocol.io/specification/2024-11-05/)
@@ -142,7 +132,7 @@ This library implements the complete MCP specification:
 
 Contributions are welcome! Please see the issue tracker for open issues and feature requests.
 
-## Disclaimer
+## Disclaimer - AI Assistance
 
 I am not sure whether there is any stigma associated with this but Claude helped me write a lot of this library. I started with a very specific specification of what I wanted to achieve and worked shoulder-to-shoulder with Claude to implement and refactor the library until I was happy with it. A few of the features such as the Derive functions are a little out of my comfort zone to have manually written, so I appreciated having an expert guide me here - however I do suspect that this implementation may be sub-par and I do intend to refactor and rewrite large pieces of this through regular maintenance.
 
