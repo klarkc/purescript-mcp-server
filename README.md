@@ -1,4 +1,4 @@
-# haskell-mcp-server
+# mcp-server
 
 A fully-featured Haskell library for building [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers.
 
@@ -109,13 +109,13 @@ And then configure Claude by editing `claude_desktop_config.json`:
 ```json
 {
     "mcpServers": {
-       "haskell-mcp-lib-example": {
+       "haskell-mcp-server-example": {
             "command": "docker",
             "args": [
                 "run",
                 "-i",
                 "--entrypoint=/usr/local/bin/template-haskell-example",
-                "drshade/haskell-mcp-lib"
+                "drshade/haskell-mcp-server"
             ]
         }
     }
@@ -125,7 +125,7 @@ And then configure Claude by editing `claude_desktop_config.json`:
 ## Documentation
 
 - [MCP Specification](https://modelcontextprotocol.io/specification/2024-11-05/)
-- [API Documentation](https://hackage.haskell.org/package/haskell-mcp-server)
+- [API Documentation](https://hackage.haskell.org/package/mcp-server)
 - [Examples](examples/)
 
 ## Contributing
