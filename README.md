@@ -8,9 +8,7 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 - **Type-Safe API**: Leverage Haskell's type system for robust MCP servers
 - **Multiple Abstractions**: Both low-level fine-grained control and high-level derived interfaces
 - **Template Haskell Support**: Automatic handler derivation from data types
-- **JSON-RPC Transport**: Complete JSON-RPC 2.0 implementation with stdin/stdout communication
 - **Pagination Support**: Cursor-based pagination for large result sets
-- **Docker Ready**: Multi-stage Docker builds with individual executable deployment
 
 ## Supported MCP Features
 
@@ -90,20 +88,38 @@ main = runMcpServerStdIn serverInfo handlers
 
 The library includes three complete examples:
 
-- **`app/Main.hs`**: Basic low-level MCP server
 - **`examples/HighLevel.hs`**: Manual high-level implementation
 - **`examples/TemplateHaskell.hs`**: Automatic Template Haskell derivation
 
 ## Docker Usage
+
+I like to build and publish my MCP servers to Docker - which means that it's much easier to configure assistants such as Claude Desktop to run them. 
 
 ```bash
 # Build the image
 docker build -t haskell-mcp-server .
 
 # Run different examples
-docker run -i haskell-mcp-server  # Default server
 docker run -i --entrypoint="/usr/local/bin/template-haskell-example" haskell-mcp-server
 docker run -i --entrypoint="/usr/local/bin/high-level-example" haskell-mcp-server
+```
+
+And then configure Claude by editing `claude_desktop_config.json`:
+
+```json
+{
+    "mcpServers": {
+       "haskell-mcp-lib-example": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--entrypoint=/usr/local/bin/template-haskell-example",
+                "drshade/haskell-mcp-lib"
+            ]
+        }
+    }
+}
 ```
 
 ## Protocol Compliance
@@ -125,6 +141,10 @@ This library implements the complete MCP specification:
 ## Contributing
 
 Contributions are welcome! Please see the issue tracker for open issues and feature requests.
+
+## Disclaimer
+
+I am not sure whether there is any stigma associated with this but Claude helped me write a lot of this library. I started with a very specific specification of what I wanted to achieve and worked shoulder-to-shoulder with Claude to implement and refactor the library until I was happy with it. A few of the features such as the Derive functions are a little out of my comfort zone to have manually written, so I appreciated having an expert guide me here - however I do suspect that this implementation may be sub-par and I do intend to refactor and rewrite large pieces of this through regular maintenance.
 
 ## License
 
