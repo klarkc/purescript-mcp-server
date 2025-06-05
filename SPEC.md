@@ -1,4 +1,8 @@
 
+# NOTICE
+
+This file is kept for brevity - but served as my starting specification before writing the library. This may no longer be useful and will be superceded by examples in the examples/ folder.
+
 # Haskell MCP Server Library
 
 Fully featured haskell library for building MCP Servers.
@@ -25,7 +29,7 @@ Using an example of a grocery shopping MCP server:
 
 ```haskell
 
-import MCP.Server.Types (Content(ContentText, ContentImage), Error(InvalidPromptName, MissingRequiredParams, ResourceNotFound, InternalError, UnknownTool), PromptDefinition, ResourceDefinition, ArgumentDefinition, InputSchemaDefinition(..))
+import MCP.Server.Types (Content(ContentText, ContentImage), Error(InvalidPromptName, MissingRequiredParams, ResourceNotFound, InternalError, UnknownTool), PromptDefinition, ResourceDefinition, ArgumentDefinition, InputSchemaDefinition(..), PaginatedResult(..), Cursor)
 import Network.URI (URI(URI))
 import qualified Data.Map as Map
 
@@ -34,59 +38,68 @@ type ToolName = Text
 type ArgumentName = Text
 type ArgumentValue = Text
 
-handleListPrompts :: (Monad m) => m [PromptDefinition]
-handleListPrompts =
-    pure
-        [ PromptDefinition
-            { promptDefinitionName = "recipe"
-            , promptDefinitionDescription = "Generate a detailed recipe for a particular idea" 
-            , promptDefinitionArguments = 
-                [ ArgumentDefinition
-                    { argumentDefinitionName = "idea"
-                    , argumentDefinitionDescription = "inspiring idea for the recipe" 
-                    , argumentDefinitionRequired = True
-                    }
-                ]
-            }
-        ]
+handleListPrompts :: (Monad m) => Maybe Cursor -> m (PaginatedResult [PromptDefinition])
+handleListPrompts cursor =
+    pure $ PaginatedResult
+        { paginatedItems = 
+            [ PromptDefinition
+                { promptDefinitionName = "recipe"
+                , promptDefinitionDescription = "Generate a detailed recipe for a particular idea" 
+                , promptDefinitionArguments = 
+                    [ ArgumentDefinition
+                        { argumentDefinitionName = "idea"
+                        , argumentDefinitionDescription = "inspiring idea for the recipe" 
+                        , argumentDefinitionRequired = True
+                        }
+                    ]
+                }
+            ]
+        , paginatedNextCursor = Nothing  -- No more pages
+        }
 
-handleListResources :: (Monad m) => m [ResourceDefinition]
-handleListResources = 
-    pure 
-        [ ResourceDefinition
-            { resourceDefinitionURI = "file:///product_categories"
-            , resourceDefinitionName = "product_categories"
-            , resourceDefinitionDescription = "List of product categories"
-            , resourceDefinitionMimeType = "text/plain"
-            }
-        ]
+handleListResources :: (Monad m) => Maybe Cursor -> m (PaginatedResult [ResourceDefinition])
+handleListResources cursor = 
+    pure $ PaginatedResult
+        { paginatedItems =
+            [ ResourceDefinition
+                { resourceDefinitionURI = "file:///product_categories"
+                , resourceDefinitionName = "product_categories"
+                , resourceDefinitionDescription = "List of product categories"
+                , resourceDefinitionMimeType = "text/plain"
+                }
+            ]
+        , paginatedNextCursor = Nothing  -- No more pages
+        }
 
-handleListTools :: (Monad m) => m [ToolDefinition]
-handleListTools = 
-    pure 
-        [ ToolDefinition
-            { toolDefinitionName = "search_for_product" 
-            , toolDefinitionDescription = "Search for products in the catalog"
-            , toolDefinitionInputSchema = 
-                InputSchemaDefinitionObject
-                    { properties = 
-                        [   ("q"
-                            , InputSchemaDefinitionProperty
-                                { type = "string"
-                                , description = "Matching this query, using 'contains' semantics"
-                                }
-                            )
-                        ,   ("category"
-                            , InputSchemaDefinitionProperty
-                                { type = "string"
-                                , description = "Limit to searching within this category (optional)"
-                                }
-                            )
-                        ]
-                    , required = ["q"]
-                    }
-            }
-        ]
+handleListTools :: (Monad m) => Maybe Cursor -> m (PaginatedResult [ToolDefinition])
+handleListTools cursor = 
+    pure $ PaginatedResult
+        { paginatedItems =
+            [ ToolDefinition
+                { toolDefinitionName = "search_for_product" 
+                , toolDefinitionDescription = "Search for products in the catalog"
+                , toolDefinitionInputSchema = 
+                    InputSchemaDefinitionObject
+                        { properties = 
+                            [   ("q"
+                                , InputSchemaDefinitionProperty
+                                    { type = "string"
+                                    , description = "Matching this query, using 'contains' semantics"
+                                    }
+                                )
+                            ,   ("category"
+                                , InputSchemaDefinitionProperty
+                                    { type = "string"
+                                    , description = "Limit to searching within this category (optional)"
+                                    }
+                                )
+                            ]
+                        , required = ["q"]
+                        }
+                }
+            ]
+        , paginatedNextCursor = Nothing  -- No more pages
+        }
 
 handleGetPrompt :: (Monad m) => PromptName -> [(ArgumentName, ArgumentValue)] -> m (Either Error Content)
 handleGetPrompt "recipe" args = do
