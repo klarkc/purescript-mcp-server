@@ -21,4 +21,5 @@ data MyTool
     = SearchForProduct { q :: Text, category :: Maybe Text }
     | AddToCart { sku :: Text }
     | Checkout
+    | ComplexTool { field1 :: Text, field2 :: Text, field3 :: Maybe Text, field4 :: Text, field5 :: Maybe Text }
     deriving (Show, Eq)
