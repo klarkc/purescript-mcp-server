@@ -4,8 +4,11 @@
 module MCP.Server.Derive
   ( -- * Template Haskell Derivation
     derivePromptHandler
+  , derivePromptHandlerWithDescription
   , deriveResourceHandler
+  , deriveResourceHandlerWithDescription
   , deriveToolHandler
+  , deriveToolHandlerWithDescription
   ) where
 
 import qualified Data.Map            as Map
@@ -30,15 +33,15 @@ toSnakeCase (x:xs) = Char.toLower x : go xs
 clauseToMatch :: Clause -> Match
 clauseToMatch (Clause ps b ds) = Match (case ps of [p] -> p; _ -> TupP ps) b ds
 
--- | Derive prompt handlers from a data type
--- Usage: $(derivePromptHandler ''MyPrompt 'handlePrompt)
-derivePromptHandler :: Name -> Name -> Q Exp
-derivePromptHandler typeName handlerName = do
+-- | Derive prompt handlers from a data type with custom descriptions
+-- Usage: $(derivePromptHandlerWithDescription ''MyPrompt 'handlePrompt [("Constructor", "Description")])
+derivePromptHandlerWithDescription :: Name -> Name -> [(String, String)] -> Q Exp
+derivePromptHandlerWithDescription typeName handlerName descriptions = do
   info <- reify typeName
   case info of
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate prompt definitions
-      promptDefs <- sequence $ map mkPromptDef constructors
+      promptDefs <- sequence $ map (mkPromptDefWithDescription descriptions) constructors
 
       -- Generate list handler
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
@@ -56,34 +59,55 @@ derivePromptHandler typeName handlerName = do
           (map clauseToMatch cases ++ [defaultMatch])
 
       return $ TupE [Just listHandlerExp, Just getHandlerExp]
-    _ -> fail $ "derivePromptHandler: " ++ show typeName ++ " is not a data type"
+    _ -> fail $ "derivePromptHandlerWithDescription: " ++ show typeName ++ " is not a data type"
 
-mkPromptDef :: Con -> Q Exp
-mkPromptDef (NormalC name []) = do
-  let promptName = T.pack . toSnakeCase . nameBase $ name
-  [| PromptDefinition
-      { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
-      , promptDefinitionDescription = $(litE $ stringL $ "Handle " ++ nameBase name)
-      , promptDefinitionArguments = []
-      } |]
-mkPromptDef (RecC name fields) = do
-  let promptName = T.pack . toSnakeCase . nameBase $ name
-  args <- sequence $ map mkArgDef fields
-  [| PromptDefinition
-      { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
-      , promptDefinitionDescription = $(litE $ stringL $ "Handle " ++ nameBase name)
-      , promptDefinitionArguments = $(return $ ListE args)
-      } |]
-mkPromptDef _ = fail "Unsupported constructor type"
+-- | Derive prompt handlers from a data type
+-- Usage: $(derivePromptHandler ''MyPrompt 'handlePrompt)
+derivePromptHandler :: Name -> Name -> Q Exp
+derivePromptHandler typeName handlerName = 
+  derivePromptHandlerWithDescription typeName handlerName []
 
-mkArgDef :: (Name, Bang, Type) -> Q Exp
-mkArgDef (fieldName, _, fieldType) = do
+mkPromptDefWithDescription :: [(String, String)] -> Con -> Q Exp
+mkPromptDefWithDescription descriptions con = 
+  case con of
+    NormalC name [] -> do
+      let promptName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> "Handle " ++ constructorName
+      [| PromptDefinition
+          { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
+          , promptDefinitionDescription = $(litE $ stringL description)
+          , promptDefinitionArguments = []
+          } |]
+    RecC name fields -> do
+      let promptName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> "Handle " ++ constructorName
+      args <- sequence $ map (mkArgDef descriptions) fields
+      [| PromptDefinition
+          { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
+          , promptDefinitionDescription = $(litE $ stringL description)
+          , promptDefinitionArguments = $(return $ ListE args)
+          } |]
+    _ -> fail "Unsupported constructor type"
+
+
+mkArgDef :: [(String, String)] -> (Name, Bang, Type) -> Q Exp
+mkArgDef descriptions (fieldName, _, fieldType) = do
   let isOptional = case fieldType of
         AppT (ConT n) _ -> nameBase n == "Maybe"
         _               -> False
+  let fieldNameStr = nameBase fieldName
+  let description = case lookup fieldNameStr descriptions of
+        Just desc -> desc
+        Nothing   -> fieldNameStr
   [| ArgumentDefinition
-      { argumentDefinitionName = $(litE $ stringL $ nameBase fieldName)
-      , argumentDefinitionDescription = $(litE $ stringL $ nameBase fieldName)
+      { argumentDefinitionName = $(litE $ stringL fieldNameStr)
+      , argumentDefinitionDescription = $(litE $ stringL description)
       , argumentDefinitionRequired = $(if isOptional then [| False |] else [| True |])
       } |]
 
@@ -173,15 +197,15 @@ buildNestedFieldValidation conName handlerName ((fieldName, _, fieldType):remain
             $(return continuation)
           Nothing -> pure $ Left $ MissingRequiredParams $ "field '" <> $(litE $ stringL fieldStr) <> "' is missing" |]
 
--- | Derive resource handlers from a data type
--- Usage: $(deriveResourceHandler ''MyResource 'handleResource)
-deriveResourceHandler :: Name -> Name -> Q Exp
-deriveResourceHandler typeName handlerName = do
+-- | Derive resource handlers from a data type with custom descriptions
+-- Usage: $(deriveResourceHandlerWithDescription ''MyResource 'handleResource [("Constructor", "Description")])
+deriveResourceHandlerWithDescription :: Name -> Name -> [(String, String)] -> Q Exp
+deriveResourceHandlerWithDescription typeName handlerName descriptions = do
   info <- reify typeName
   case info of
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate resource definitions
-      resourceDefs <- sequence $ map mkResourceDef constructors
+      resourceDefs <- sequence $ map (mkResourceDefWithDescription descriptions) constructors
 
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
         { paginatedItems = $(return $ ListE resourceDefs)
@@ -198,19 +222,32 @@ deriveResourceHandler typeName handlerName = do
           (map clauseToMatch cases ++ [defaultMatch])
 
       return $ TupE [Just listHandlerExp, Just readHandlerExp]
-    _ -> fail $ "deriveResourceHandler: " ++ show typeName ++ " is not a data type"
+    _ -> fail $ "deriveResourceHandlerWithDescription: " ++ show typeName ++ " is not a data type"
 
-mkResourceDef :: Con -> Q Exp
-mkResourceDef (NormalC name []) = do
+-- | Derive resource handlers from a data type
+-- Usage: $(deriveResourceHandler ''MyResource 'handleResource)
+deriveResourceHandler :: Name -> Name -> Q Exp
+deriveResourceHandler typeName handlerName = 
+  deriveResourceHandlerWithDescription typeName handlerName []
+
+mkResourceDefWithDescription :: [(String, String)] -> Con -> Q Exp
+mkResourceDefWithDescription descriptions (NormalC name []) = do
   let resourceName = T.pack . toSnakeCase . nameBase $ name
   let resourceURI = "resource://" <> T.unpack resourceName
+  let constructorName = nameBase name
+  let description = case lookup constructorName descriptions of
+        Just desc -> Just desc
+        Nothing   -> Just constructorName
   [| ResourceDefinition
       { resourceDefinitionURI = $(litE $ stringL resourceURI)
       , resourceDefinitionName = $(litE $ stringL $ T.unpack resourceName)
-      , resourceDefinitionDescription = Just $(litE $ stringL $ nameBase name)
+      , resourceDefinitionDescription = $(case description of
+          Just desc -> [| Just $(litE $ stringL desc) |]
+          Nothing   -> [| Nothing |])
       , resourceDefinitionMimeType = Just "text/plain"
       } |]
-mkResourceDef _ = fail "Unsupported constructor type for resources"
+mkResourceDefWithDescription _ _ = fail "Unsupported constructor type for resources"
+
 
 mkResourceCase :: Name -> Con -> Q Clause
 mkResourceCase handlerName (NormalC name []) = do
@@ -221,15 +258,15 @@ mkResourceCase handlerName (NormalC name []) = do
     []
 mkResourceCase _ _ = fail "Unsupported constructor type for resources"
 
--- | Derive tool handlers from a data type
--- Usage: $(deriveToolHandler ''MyTool 'handleTool)
-deriveToolHandler :: Name -> Name -> Q Exp
-deriveToolHandler typeName handlerName = do
+-- | Derive tool handlers from a data type with custom descriptions
+-- Usage: $(deriveToolHandlerWithDescription ''MyTool 'handleTool [("Constructor", "Description")])
+deriveToolHandlerWithDescription :: Name -> Name -> [(String, String)] -> Q Exp
+deriveToolHandlerWithDescription typeName handlerName descriptions = do
   info <- reify typeName
   case info of
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate tool definitions
-      toolDefs <- sequence $ map mkToolDef constructors
+      toolDefs <- sequence $ map (mkToolDefWithDescription descriptions) constructors
 
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
         { paginatedItems = $(return $ ListE toolDefs)
@@ -246,42 +283,62 @@ deriveToolHandler typeName handlerName = do
           (map clauseToMatch cases ++ [defaultMatch])
 
       return $ TupE [Just listHandlerExp, Just callHandlerExp]
-    _ -> fail $ "deriveToolHandler: " ++ show typeName ++ " is not a data type"
+    _ -> fail $ "deriveToolHandlerWithDescription: " ++ show typeName ++ " is not a data type"
 
-mkToolDef :: Con -> Q Exp
-mkToolDef (NormalC name []) = do
-  let toolName = T.pack . toSnakeCase . nameBase $ name
-  [| ToolDefinition
-      { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
-      , toolDefinitionDescription = $(litE $ stringL $ nameBase name)
-      , toolDefinitionInputSchema = InputSchemaDefinitionObject
-          { properties = []
-          , required = []
-          }
-      } |]
-mkToolDef (RecC name fields) = do
-  let toolName = T.pack . toSnakeCase . nameBase $ name
-  props <- sequence $ map mkProperty fields
-  requiredFields <- return $ map (\(fieldName, _, fieldType) ->
-    let isOptional = case fieldType of
-          AppT (ConT n) _ -> nameBase n == "Maybe"
-          _               -> False
-    in if isOptional then Nothing else Just (nameBase fieldName)
-    ) fields
-  let required = [f | Just f <- requiredFields]
-  [| ToolDefinition
-      { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
-      , toolDefinitionDescription = $(litE $ stringL $ nameBase name)
-      , toolDefinitionInputSchema = InputSchemaDefinitionObject
-          { properties = $(return $ ListE props)
-          , required = $(return $ ListE $ map (LitE . StringL) required)
-          }
-      } |]
-mkToolDef _ = fail "Unsupported constructor type for tools"
+-- | Derive tool handlers from a data type
+-- Usage: $(deriveToolHandler ''MyTool 'handleTool)
+deriveToolHandler :: Name -> Name -> Q Exp
+deriveToolHandler typeName handlerName = 
+  deriveToolHandlerWithDescription typeName handlerName []
 
-mkProperty :: (Name, Bang, Type) -> Q Exp
-mkProperty (fieldName, _, fieldType) = do
+mkToolDefWithDescription :: [(String, String)] -> Con -> Q Exp
+mkToolDefWithDescription descriptions con = 
+  case con of
+    NormalC name [] -> do
+      let toolName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> constructorName
+      [| ToolDefinition
+          { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
+          , toolDefinitionDescription = $(litE $ stringL description)
+          , toolDefinitionInputSchema = InputSchemaDefinitionObject
+              { properties = []
+              , required = []
+              }
+          } |]
+    RecC name fields -> do
+      let toolName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> constructorName
+      props <- sequence $ map (mkProperty descriptions) fields
+      requiredFields <- return $ map (\(fieldName, _, fieldType) ->
+        let isOptional = case fieldType of
+              AppT (ConT n) _ -> nameBase n == "Maybe"
+              _               -> False
+        in if isOptional then Nothing else Just (nameBase fieldName)
+        ) fields
+      let required = [f | Just f <- requiredFields]
+      [| ToolDefinition
+          { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
+          , toolDefinitionDescription = $(litE $ stringL description)
+          , toolDefinitionInputSchema = InputSchemaDefinitionObject
+              { properties = $(return $ ListE props)
+              , required = $(return $ ListE $ map (LitE . StringL) required)
+              }
+          } |]
+    _ -> fail "Unsupported constructor type for tools"
+
+
+mkProperty :: [(String, String)] -> (Name, Bang, Type) -> Q Exp
+mkProperty descriptions (fieldName, _, fieldType) = do
   let fieldStr = nameBase fieldName
+  let description = case lookup fieldStr descriptions of
+        Just desc -> desc
+        Nothing   -> fieldStr
   let jsonType = case fieldType of
         ConT n | nameBase n == "Int" -> "integer"
         ConT n | nameBase n == "Integer" -> "integer"
@@ -299,7 +356,7 @@ mkProperty (fieldName, _, fieldType) = do
         _ -> "string"
   [| ($(litE $ stringL fieldStr), InputSchemaDefinitionProperty
       { propertyType = $(litE $ stringL jsonType)
-      , propertyDescription = $(litE $ stringL fieldStr)
+      , propertyDescription = $(litE $ stringL description)
       }) |]
 
 mkToolCase :: Name -> Con -> Q Clause

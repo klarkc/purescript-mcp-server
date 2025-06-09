@@ -142,6 +142,10 @@ testResourceHandlers = $(deriveResourceHandler ''TestResource 'handleTestResourc
 testToolHandlers :: (ToolListHandler IO, ToolCallHandler IO)
 testToolHandlers = $(deriveToolHandler ''TestTool 'handleTestTool)
 
+-- Test handlers with custom descriptions
+testToolHandlersWithDescriptions :: (ToolListHandler IO, ToolCallHandler IO)
+testToolHandlersWithDescriptions = $(deriveToolHandlerWithDescription ''TestTool 'handleTestTool testDescriptions)
+
 -- End-to-end test functions
 testPromptDerivation :: IO Bool
 testPromptDerivation = do
@@ -226,6 +230,44 @@ testToolDerivation = do
     
     return (test1 && test2 && test3 && test4)
 
+testCustomDescriptions :: IO Bool
+testCustomDescriptions = do
+    let (toolListHandler, _) = testToolHandlersWithDescriptions
+    
+    paginatedResult <- toolListHandler Nothing
+    let toolDefs = paginatedItems paginatedResult
+    
+    -- Find the Echo tool definition and check its description
+    let echoDef = filter (\def -> toolDefinitionName def == "echo") toolDefs
+    let echoDescTest = case echoDef of
+            [def] -> toolDefinitionDescription def == "Echoes the input text back to the user"
+            _ -> False
+    
+    -- Find the Calculate tool definition and check its description and field descriptions
+    let calculateDef = filter (\def -> toolDefinitionName def == "calculate") toolDefs
+    let calculateTest = case calculateDef of
+            [def] -> 
+                let correctToolDesc = toolDefinitionDescription def == "Performs mathematical calculations"
+                    correctFieldDescs = case toolDefinitionInputSchema def of
+                        InputSchemaDefinitionObject props _ ->
+                            let textDesc = case lookup "text" props of
+                                    Just prop -> propertyDescription prop == "The text to echo back"
+                                    Nothing -> True  -- text field doesn't exist in Calculate, that's fine
+                                operationDesc = case lookup "operation" props of
+                                    Just prop -> propertyDescription prop == "The mathematical operation to perform"
+                                    Nothing -> False
+                                xDesc = case lookup "x" props of
+                                    Just prop -> propertyDescription prop == "The first number"
+                                    Nothing -> False
+                                yDesc = case lookup "y" props of
+                                    Just prop -> propertyDescription prop == "The second number"
+                                    Nothing -> False
+                            in operationDesc && xDesc && yDesc
+                in correctToolDesc && correctFieldDescs
+            _ -> False
+    
+    return (echoDescTest && calculateTest)
+
 testSchemaGeneration :: IO Bool
 testSchemaGeneration = do
     let (toolListHandler, _) = testToolHandlers
@@ -271,7 +313,11 @@ runEndToEndTests = do
     schemaResult <- testSchemaGeneration
     putStrLn $ if schemaResult then "PASS" else "FAIL"
     
-    let allPassed = promptResult && resourceResult && toolResult && schemaResult
+    putStr "Testing custom descriptions: "
+    descriptionResult <- testCustomDescriptions
+    putStrLn $ if descriptionResult then "PASS" else "FAIL"
+    
+    let allPassed = promptResult && resourceResult && toolResult && schemaResult && descriptionResult
     putStrLn $ "End-to-End result: " ++ if allPassed then "PASS" else "FAIL"
     return allPassed
 

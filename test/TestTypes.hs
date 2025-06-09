@@ -59,3 +59,14 @@ handleTestTool (Search query limit caseSens) =
     pure $ ContentText $ "Search results for '" <> query <> "'" <>
         maybe "" ((" (limit=" <>) . (<> ")") . T.pack . show) limit <>
         maybe "" ((" (case-sensitive=" <>) . (<> ")") . T.pack . show) caseSens
+
+-- Test descriptions for custom description functionality
+testDescriptions :: [(String, String)]
+testDescriptions = 
+    [ ("Echo", "Echoes the input text back to the user")
+    , ("Calculate", "Performs mathematical calculations")
+    , ("text", "The text to echo back")
+    , ("operation", "The mathematical operation to perform")
+    , ("x", "The first number")
+    , ("y", "The second number")
+    ]

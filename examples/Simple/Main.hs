@@ -32,8 +32,8 @@ main = do
     hPutStrLn stderr "Using Template Haskell derivation for tools"
     hPutStrLn stderr "Ready for JSON-RPC communication"
 
-    -- Derive the tool handlers using Template Haskell
-    let tools = $(deriveToolHandler ''SimpleTool 'handleTool)
+    -- Derive the tool handlers using Template Haskell with descriptions
+    let tools = $(deriveToolHandlerWithDescription ''SimpleTool 'handleTool simpleDescriptions)
      in runMcpServerStdIn
         McpServerInfo
             { serverName = "Simple Key-Value MCP Server"
