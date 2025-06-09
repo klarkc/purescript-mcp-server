@@ -21,6 +21,15 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 
 ## Quick Start
 
+Add the library `mcp-server` to your cabal file:
+
+```cabal
+build-depends:
+  mcp-server
+```
+
+Create a simple module, such as this example below:
+
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -62,6 +71,28 @@ main = runMcpServerStdIn serverInfo handlers
       }
 ```
 
+## Custom Descriptions
+
+You can provide custom descriptions for constructors and fields using the `*WithDescription` variants:
+
+```haskell
+-- Define descriptions for constructors and fields
+descriptions :: [(String, String)]
+descriptions = 
+  [ ("Recipe", "Generate a recipe for a specific dish")     -- Constructor description
+  , ("Search", "Search our menu database")                  -- Constructor description
+  , ("idea", "The dish you want a recipe for")              -- Field description
+  , ("query", "Search terms to find menu items")            -- Field description
+  ]
+
+-- Use in derivation
+handlers = McpServerHandlers
+  { prompts = Just $(derivePromptHandlerWithDescription ''MyPrompt 'handlePrompt descriptions)
+  , tools = Just $(deriveToolHandlerWithDescription ''MyTool 'handleTool descriptions)
+  , resources = Just $(deriveResourceHandlerWithDescription ''MyResource 'handleResource descriptions)
+  }
+```
+
 ## Manual Handler Implementation
 
 For fine-grained control, implement handlers manually:
@@ -86,10 +117,10 @@ main = runMcpServerStdIn serverInfo handlers
 
 ## Examples
 
-The library includes three complete examples:
+The library includes complete examples:
 
-- **`examples/HighLevel.hs`**: Manual high-level implementation
-- **`examples/TemplateHaskell.hs`**: Automatic Template Haskell derivation
+- **`examples/Simple/`**: Basic key-value store using Template Haskell derivation
+- **`examples/Complete/`**: Full-featured example with prompts, resources, and tools
 
 ## Docker Usage
 
