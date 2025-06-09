@@ -12,10 +12,10 @@ RUN cabal update
 
 # Copy and build
 WORKDIR /app
-COPY haskell-mcp-server.cabal /app
+COPY mcp-server.cabal /app
+COPY README.md /app
 COPY CHANGELOG.md /app
 COPY LICENSE /app
-COPY SPEC.md /app
 
 RUN cabal build all --only-dependencies
 
@@ -28,8 +28,8 @@ RUN cabal build all
 
 # Install all executables to /usr/local/bin
 RUN cabal install exe:haskell-mcp-server --installdir=/usr/local/bin
-RUN cabal install exe:high-level-example --installdir=/usr/local/bin
-RUN cabal install exe:template-haskell-example --installdir=/usr/local/bin
+RUN cabal install exe:complete-example --installdir=/usr/local/bin
+RUN cabal install exe:simple-example --installdir=/usr/local/bin
 
 # Runtime stage
 FROM debian:bullseye-slim
@@ -41,9 +41,9 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy all binaries from builder
-COPY --from=builder /usr/local/bin/haskell-mcp-lib /usr/local/bin/haskell-mcp-lib
-COPY --from=builder /usr/local/bin/high-level-example /usr/local/bin/high-level-example
-COPY --from=builder /usr/local/bin/template-haskell-example /usr/local/bin/template-haskell-example
+COPY --from=builder /usr/local/bin/haskell-mcp-server /usr/local/bin/haskell-mcp-server
+COPY --from=builder /usr/local/bin/complete-example /usr/local/bin/complete-example
+COPY --from=builder /usr/local/bin/simple-example /usr/local/bin/simple-example
 
 WORKDIR /app
 

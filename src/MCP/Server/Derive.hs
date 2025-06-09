@@ -12,8 +12,19 @@ import qualified Data.Map            as Map
 import qualified Data.Text           as T
 import           Language.Haskell.TH
 import           Text.Read           (readMaybe)
+import qualified Data.Char           as Char
 
 import           MCP.Server.Types
+
+-- Helper function to convert PascalCase/camelCase to snake_case
+toSnakeCase :: String -> String
+toSnakeCase [] = []
+toSnakeCase (x:xs) = Char.toLower x : go xs
+  where
+    go [] = []
+    go (c:cs)
+      | Char.isUpper c = '_' : Char.toLower c : go cs
+      | otherwise = c : go cs
 
 -- Helper function to convert Clause to Match
 clauseToMatch :: Clause -> Match
@@ -49,14 +60,14 @@ derivePromptHandler typeName handlerName = do
 
 mkPromptDef :: Con -> Q Exp
 mkPromptDef (NormalC name []) = do
-  let promptName = T.toLower . T.pack . nameBase $ name
+  let promptName = T.pack . toSnakeCase . nameBase $ name
   [| PromptDefinition
       { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
       , promptDefinitionDescription = $(litE $ stringL $ "Handle " ++ nameBase name)
       , promptDefinitionArguments = []
       } |]
 mkPromptDef (RecC name fields) = do
-  let promptName = T.toLower . T.pack . nameBase $ name
+  let promptName = T.pack . toSnakeCase . nameBase $ name
   args <- sequence $ map mkArgDef fields
   [| PromptDefinition
       { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
@@ -78,14 +89,14 @@ mkArgDef (fieldName, _, fieldType) = do
 
 mkPromptCase :: Name -> Con -> Q Clause
 mkPromptCase handlerName (NormalC name []) = do
-  let promptName = T.toLower . T.pack . nameBase $ name
+  let promptName = T.pack . toSnakeCase . nameBase $ name
   clause [litP $ stringL $ T.unpack promptName]
     (normalB [| do
         content <- $(varE handlerName) $(conE name)
         pure $ Right content |])
     []
 mkPromptCase handlerName (RecC name fields) = do
-  let promptName = T.toLower . T.pack . nameBase $ name
+  let promptName = T.pack . toSnakeCase . nameBase $ name
   body <- mkRecordCase name handlerName fields
   clause [litP $ stringL $ T.unpack promptName] (normalB (return body)) []
 mkPromptCase _ _ = fail "Unsupported constructor type"
@@ -191,7 +202,7 @@ deriveResourceHandler typeName handlerName = do
 
 mkResourceDef :: Con -> Q Exp
 mkResourceDef (NormalC name []) = do
-  let resourceName = T.toLower . T.pack . nameBase $ name
+  let resourceName = T.pack . toSnakeCase . nameBase $ name
   let resourceURI = "resource://" <> T.unpack resourceName
   [| ResourceDefinition
       { resourceDefinitionURI = $(litE $ stringL resourceURI)
@@ -203,7 +214,7 @@ mkResourceDef _ = fail "Unsupported constructor type for resources"
 
 mkResourceCase :: Name -> Con -> Q Clause
 mkResourceCase handlerName (NormalC name []) = do
-  let resourceName = T.toLower . T.pack . nameBase $ name
+  let resourceName = T.pack . toSnakeCase . nameBase $ name
   let resourceURI = "resource://" <> T.unpack resourceName
   clause [litP $ stringL resourceURI]
     (normalB [| Right <$> $(varE handlerName) $(conE name) |])
@@ -239,7 +250,7 @@ deriveToolHandler typeName handlerName = do
 
 mkToolDef :: Con -> Q Exp
 mkToolDef (NormalC name []) = do
-  let toolName = T.toLower . T.pack . nameBase $ name
+  let toolName = T.pack . toSnakeCase . nameBase $ name
   [| ToolDefinition
       { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
       , toolDefinitionDescription = $(litE $ stringL $ nameBase name)
@@ -249,7 +260,7 @@ mkToolDef (NormalC name []) = do
           }
       } |]
 mkToolDef (RecC name fields) = do
-  let toolName = T.toLower . T.pack . nameBase $ name
+  let toolName = T.pack . toSnakeCase . nameBase $ name
   props <- sequence $ map mkProperty fields
   requiredFields <- return $ map (\(fieldName, _, fieldType) ->
     let isOptional = case fieldType of
@@ -293,14 +304,14 @@ mkProperty (fieldName, _, fieldType) = do
 
 mkToolCase :: Name -> Con -> Q Clause
 mkToolCase handlerName (NormalC name []) = do
-  let toolName = T.toLower . T.pack . nameBase $ name
+  let toolName = T.pack . toSnakeCase . nameBase $ name
   clause [litP $ stringL $ T.unpack toolName]
     (normalB [| do
         content <- $(varE handlerName) $(conE name)
         pure $ Right content |])
     []
 mkToolCase handlerName (RecC name fields) = do
-  let toolName = T.toLower . T.pack . nameBase $ name
+  let toolName = T.pack . toSnakeCase . nameBase $ name
   body <- mkRecordCase name handlerName fields
   clause [litP $ stringL $ T.unpack toolName] (normalB (return body)) []
 mkToolCase _ _ = fail "Unsupported constructor type for tools"

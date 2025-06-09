@@ -15,7 +15,7 @@ name: mcp-server
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version: 0.1.0.3
+version: 0.1.0.4
 -- A short (one-line) description of the package.
 synopsis: Library for building Model Context Protocol (MCP) servers
 -- A longer description of the package.
@@ -47,8 +47,7 @@ extra-doc-files:
   README.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
-extra-source-files: SPEC.md
-
+-- extra-source-files: SPEC.md
 -- Source repository information
 source-repository head
   type: git

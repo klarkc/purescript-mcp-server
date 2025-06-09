@@ -148,25 +148,25 @@ testPromptDerivation = do
     let (_, getHandler) = testPromptHandlers
     
     -- Test simple prompt
-    result1 <- getHandler "simpleprompt" [("message", "hello")]
+    result1 <- getHandler "simple_prompt" [("message", "hello")]
     let test1 = case result1 of
             Right (ContentText content) -> content == "Simple prompt: hello"
             _ -> False
     
     -- Test complex prompt with multiple types
-    result2 <- getHandler "complexprompt" [("title", "urgent task"), ("priority", "5"), ("urgent", "true")]
+    result2 <- getHandler "complex_prompt" [("title", "urgent task"), ("priority", "5"), ("urgent", "true")]
     let test2 = case result2 of
             Right (ContentText content) -> content == "Complex prompt: urgent task (priority=5, urgent=True)"
             _ -> False
     
     -- Test optional prompt with missing optional field
-    result3 <- getHandler "optionalprompt" [("required", "test")]
+    result3 <- getHandler "optional_prompt" [("required", "test")]
     let test3 = case result3 of
             Right (ContentText content) -> content == "Optional prompt: test"
             _ -> False
     
     -- Test optional prompt with optional field present
-    result4 <- getHandler "optionalprompt" [("required", "test"), ("optional", "42")]
+    result4 <- getHandler "optional_prompt" [("required", "test"), ("optional", "42")]
     let test4 = case result4 of
             Right (ContentText content) -> content == "Optional prompt: test optional=42"
             _ -> False
@@ -178,7 +178,7 @@ testResourceDerivation = do
     let (_, readHandler) = testResourceHandlers
     
     -- Test simple resource
-    case parseURI "resource://configfile" of
+    case parseURI "resource://config_file" of
         Just uri1 -> do
             result1 <- readHandler uri1
             let test1 = case result1 of
@@ -186,7 +186,7 @@ testResourceDerivation = do
                     _ -> False
             
             -- Test parameterized resource (this would need to match actual schema)
-            case parseURI "resource://databaseconnection" of
+            case parseURI "resource://database_connection" of
                 Just uri2 -> do
                     result2 <- readHandler uri2
                     let test2 = case result2 of
