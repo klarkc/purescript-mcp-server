@@ -187,15 +187,9 @@ handlePromptsList handlers req =
       , errorData = Nothing
       }
     Just (listHandler, _) -> do
-      let cursor = case requestParams req of
-            Just params -> case fromJSON params of
-              Success listReq -> promptsListCursor listReq
-              _               -> Nothing
-            Nothing -> Nothing
-      paginatedResult <- listHandler cursor
+      promptsList <- listHandler
       let response = PromptsListResponse
-            { promptsListPrompts = paginatedItems paginatedResult
-            , promptsListNextCursor = paginatedNextCursor paginatedResult
+            { promptsListPrompts = promptsList
             }
       return $ makeSuccessResponse (requestId req) (toJSON response)
 
@@ -248,15 +242,9 @@ handleResourcesList handlers req =
       , errorData = Nothing
       }
     Just (listHandler, _) -> do
-      let cursor = case requestParams req of
-            Just params -> case fromJSON params of
-              Success listReq -> resourcesListCursor listReq
-              _               -> Nothing
-            Nothing -> Nothing
-      paginatedResult <- listHandler cursor
+      resourcesList <- listHandler
       let response = ResourcesListResponse
-            { resourcesListResources = paginatedItems paginatedResult
-            , resourcesListNextCursor = paginatedNextCursor paginatedResult
+            { resourcesListResources = resourcesList
             }
       return $ makeSuccessResponse (requestId req) (toJSON response)
 
@@ -307,15 +295,9 @@ handleToolsList handlers req =
       , errorData = Nothing
       }
     Just (listHandler, _) -> do
-      let cursor = case requestParams req of
-            Just params -> case fromJSON params of
-              Success listReq -> toolsListCursor listReq
-              _               -> Nothing
-            Nothing -> Nothing
-      paginatedResult <- listHandler cursor
+      toolsList <- listHandler
       let response = ToolsListResponse
-            { toolsListTools = paginatedItems paginatedResult
-            , toolsListNextCursor = paginatedNextCursor paginatedResult
+            { toolsListTools = toolsList
             }
       return $ makeSuccessResponse (requestId req) (toJSON response)
 

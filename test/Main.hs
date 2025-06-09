@@ -234,8 +234,7 @@ testCustomDescriptions :: IO Bool
 testCustomDescriptions = do
     let (toolListHandler, _) = testToolHandlersWithDescriptions
     
-    paginatedResult <- toolListHandler Nothing
-    let toolDefs = paginatedItems paginatedResult
+    toolDefs <- toolListHandler
     
     -- Find the Echo tool definition and check its description
     let echoDef = filter (\def -> toolDefinitionName def == "echo") toolDefs
@@ -272,8 +271,7 @@ testSchemaGeneration :: IO Bool
 testSchemaGeneration = do
     let (toolListHandler, _) = testToolHandlers
     
-    paginatedResult <- toolListHandler Nothing
-    let toolDefs = paginatedItems paginatedResult
+    toolDefs <- toolListHandler
     
     -- Find the Calculate tool definition
     let calculateDef = filter (\def -> toolDefinitionName def == "calculate") toolDefs

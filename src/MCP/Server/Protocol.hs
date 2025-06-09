@@ -121,23 +121,20 @@ instance ToJSON PromptMessage where
 
 -- | Prompts list request
 data PromptsListRequest = PromptsListRequest
-  { promptsListCursor :: Maybe Cursor
-  } deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON PromptsListRequest where
-  parseJSON = withObject "PromptsListRequest" $ \o -> PromptsListRequest
-    <$> o .:? "cursor"
+  parseJSON _ = return PromptsListRequest
 
 -- | Prompts list response
 data PromptsListResponse = PromptsListResponse
   { promptsListPrompts :: [PromptDefinition]
-  , promptsListNextCursor :: Maybe Cursor
   } deriving (Show, Eq, Generic)
 
 instance ToJSON PromptsListResponse where
-  toJSON resp = object $
+  toJSON resp = object
     [ "prompts" .= promptsListPrompts resp
-    ] ++ maybe [] (\c -> ["nextCursor" .= c]) (promptsListNextCursor resp)
+    ]
 
 -- | Prompts get request
 data PromptsGetRequest = PromptsGetRequest
@@ -163,23 +160,20 @@ instance ToJSON PromptsGetResponse where
 
 -- | Resources list request
 data ResourcesListRequest = ResourcesListRequest
-  { resourcesListCursor :: Maybe Cursor
-  } deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON ResourcesListRequest where
-  parseJSON = withObject "ResourcesListRequest" $ \o -> ResourcesListRequest
-    <$> o .:? "cursor"
+  parseJSON _ = return ResourcesListRequest
 
 -- | Resources list response
 data ResourcesListResponse = ResourcesListResponse
   { resourcesListResources :: [ResourceDefinition]
-  , resourcesListNextCursor :: Maybe Cursor
   } deriving (Show, Eq, Generic)
 
 instance ToJSON ResourcesListResponse where
-  toJSON resp = object $
+  toJSON resp = object
     [ "resources" .= resourcesListResources resp
-    ] ++ maybe [] (\c -> ["nextCursor" .= c]) (resourcesListNextCursor resp)
+    ]
 
 -- | Resources read request
 data ResourcesReadRequest = ResourcesReadRequest
@@ -205,23 +199,20 @@ instance ToJSON ResourcesReadResponse where
 
 -- | Tools list request
 data ToolsListRequest = ToolsListRequest
-  { toolsListCursor :: Maybe Cursor
-  } deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON ToolsListRequest where
-  parseJSON = withObject "ToolsListRequest" $ \o -> ToolsListRequest
-    <$> o .:? "cursor"
+  parseJSON _ = return ToolsListRequest
 
 -- | Tools list response
 data ToolsListResponse = ToolsListResponse
   { toolsListTools :: [ToolDefinition]
-  , toolsListNextCursor :: Maybe Cursor
   } deriving (Show, Eq, Generic)
 
 instance ToJSON ToolsListResponse where
-  toJSON resp = object $
+  toJSON resp = object
     [ "tools" .= toolsListTools resp
-    ] ++ maybe [] (\c -> ["nextCursor" .= c]) (toolsListNextCursor resp)
+    ]
 
 -- | Tools call request
 data ToolsCallRequest = ToolsCallRequest

@@ -34,8 +34,6 @@ module MCP.Server.Types
   , ResourceReadHandler
   , ToolListHandler
   , ToolCallHandler
-  , PaginatedResult(..)
-  , Cursor(..)
 
     -- * Basic Types
   , PromptName
@@ -289,30 +287,15 @@ instance ToJSON ServerCapabilities where
     , fmap ("logging" .=) (capabilityLogging caps)
     ]
 
--- | Cursor for pagination
-newtype Cursor = Cursor Text
-  deriving (Show, Eq, Generic)
-
-instance ToJSON Cursor where
-  toJSON (Cursor c) = toJSON c
-
-instance FromJSON Cursor where
-  parseJSON = fmap Cursor . parseJSON
-
--- | Pagination result wrapper
-data PaginatedResult a = PaginatedResult
-  { paginatedItems      :: a
-  , paginatedNextCursor :: Maybe Cursor
-  } deriving (Show, Eq, Generic)
 
 -- | Handler type definitions
-type PromptListHandler m = Maybe Cursor -> m (PaginatedResult [PromptDefinition])
+type PromptListHandler m = m [PromptDefinition]
 type PromptGetHandler m = PromptName -> [(ArgumentName, ArgumentValue)] -> m (Either Error Content)
 
-type ResourceListHandler m = Maybe Cursor -> m (PaginatedResult [ResourceDefinition])
+type ResourceListHandler m = m [ResourceDefinition]
 type ResourceReadHandler m = URI -> m (Either Error Content)
 
-type ToolListHandler m = Maybe Cursor -> m (PaginatedResult [ToolDefinition])
+type ToolListHandler m = m [ToolDefinition]
 type ToolCallHandler m = ToolName -> [(ArgumentName, ArgumentValue)] -> m (Either Error Content)
 
 -- | Server handlers

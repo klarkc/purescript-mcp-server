@@ -8,7 +8,6 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 - **Type-Safe API**: Leverage Haskell's type system for robust MCP servers
 - **Multiple Abstractions**: Both low-level fine-grained control and high-level derived interfaces
 - **Template Haskell Support**: Automatic handler derivation from data types
-- **Pagination Support**: Cursor-based pagination for large result sets
 
 ## Supported MCP Features
 
@@ -101,7 +100,7 @@ For fine-grained control, implement handlers manually:
 import MCP.Server
 
 -- Manual handler implementation
-promptListHandler :: Maybe Cursor -> IO (PaginatedResult [PromptDefinition])
+promptListHandler :: IO [PromptDefinition]
 promptGetHandler :: PromptName -> [(ArgumentName, ArgumentValue)] -> IO (Either Error Content)
 -- ... implement your custom logic
 

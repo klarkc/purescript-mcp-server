@@ -44,10 +44,7 @@ derivePromptHandlerWithDescription typeName handlerName descriptions = do
       promptDefs <- sequence $ map (mkPromptDefWithDescription descriptions) constructors
 
       -- Generate list handler
-      listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
-        { paginatedItems = $(return $ ListE promptDefs)
-        , paginatedNextCursor = Nothing
-        } |]
+      listHandlerExp <- [| pure $(return $ ListE promptDefs) |]
 
       -- Generate get handler with cases
       cases <- sequence $ map (mkPromptCase handlerName) constructors
@@ -207,10 +204,7 @@ deriveResourceHandlerWithDescription typeName handlerName descriptions = do
       -- Generate resource definitions
       resourceDefs <- sequence $ map (mkResourceDefWithDescription descriptions) constructors
 
-      listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
-        { paginatedItems = $(return $ ListE resourceDefs)
-        , paginatedNextCursor = Nothing
-        } |]
+      listHandlerExp <- [| pure $(return $ ListE resourceDefs) |]
 
       -- Generate read handler with cases
       cases <- sequence $ map (mkResourceCase handlerName) constructors
@@ -268,10 +262,7 @@ deriveToolHandlerWithDescription typeName handlerName descriptions = do
       -- Generate tool definitions
       toolDefs <- sequence $ map (mkToolDefWithDescription descriptions) constructors
 
-      listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
-        { paginatedItems = $(return $ ListE toolDefs)
-        , paginatedNextCursor = Nothing
-        } |]
+      listHandlerExp <- [| pure $(return $ ListE toolDefs) |]
 
       -- Generate call handler with cases
       cases <- sequence $ map (mkToolCase handlerName) constructors

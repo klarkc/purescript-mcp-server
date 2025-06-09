@@ -22,7 +22,7 @@ synopsis: Library for building Model Context Protocol (MCP) servers
 description:
   A fully featured library for building MCP (Model Context Protocol) servers.
   Supports both low-level fine-grained handling and high-level derived interfaces
-  for prompts, resources, and tools. Includes JSON-RPC transport, pagination,
+  for prompts, resources, and tools. Includes JSON-RPC transport
   and stdin/stdout communication.
 
 -- The license under which the package is released.
