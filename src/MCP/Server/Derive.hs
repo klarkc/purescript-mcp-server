@@ -11,6 +11,7 @@ module MCP.Server.Derive
 import qualified Data.Map            as Map
 import qualified Data.Text           as T
 import           Language.Haskell.TH
+import           Text.Read           (readMaybe)
 
 import           MCP.Server.Types
 
@@ -27,22 +28,22 @@ derivePromptHandler typeName handlerName = do
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate prompt definitions
       promptDefs <- sequence $ map mkPromptDef constructors
-      
+
       -- Generate list handler
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
         { paginatedItems = $(return $ ListE promptDefs)
         , paginatedNextCursor = Nothing
         } |]
-      
+
       -- Generate get handler with cases
       cases <- sequence $ map (mkPromptCase handlerName) constructors
       defaultCase <- [| pure $ Left $ InvalidPromptName $ "Unknown prompt: " <> name |]
       let defaultMatch = Match WildP (NormalB defaultCase) []
-      
+
       getHandlerExp <- return $ LamE [VarP (mkName "name"), VarP (mkName "args")] $
-        CaseE (AppE (VarE 'T.unpack) (VarE (mkName "name"))) 
+        CaseE (AppE (VarE 'T.unpack) (VarE (mkName "name")))
           (map clauseToMatch cases ++ [defaultMatch])
-      
+
       return $ TupE [Just listHandlerExp, Just getHandlerExp]
     _ -> fail $ "derivePromptHandler: " ++ show typeName ++ " is not a data type"
 
@@ -68,7 +69,7 @@ mkArgDef :: (Name, Bang, Type) -> Q Exp
 mkArgDef (fieldName, _, fieldType) = do
   let isOptional = case fieldType of
         AppT (ConT n) _ -> nameBase n == "Maybe"
-        _ -> False
+        _               -> False
   [| ArgumentDefinition
       { argumentDefinitionName = $(litE $ stringL $ nameBase fieldName)
       , argumentDefinitionDescription = $(litE $ stringL $ nameBase fieldName)
@@ -111,20 +112,55 @@ buildNestedFieldValidation conName handlerName [] depth = do
 
 buildNestedFieldValidation conName handlerName ((fieldName, _, fieldType):remainingFields) depth = do
   let fieldStr = nameBase fieldName
-  let isOptional = case fieldType of
-        AppT (ConT n) _ -> nameBase n == "Maybe"
-        _ -> False
+  let (isOptional, innerType) = case fieldType of
+        AppT (ConT n) inner | nameBase n == "Maybe" -> (True, inner)
+        other                                       -> (False, other)
   let fieldVar = mkName ("field" ++ show depth)
-  
+
   continuation <- buildNestedFieldValidation conName handlerName remainingFields (depth + 1)
-  
+
+  -- Generate conversion expression based on type
+  let convertExpr rawVar = case innerType of
+        ConT n | nameBase n == "Int" ->
+          [| case readMaybe (T.unpack $(varE rawVar)) of
+               Just parsed -> parsed
+               Nothing -> error $ "Failed to parse Int from: " <> T.unpack $(varE rawVar) |]
+        ConT n | nameBase n == "Integer" ->
+          [| case readMaybe (T.unpack $(varE rawVar)) of
+               Just parsed -> parsed
+               Nothing -> error $ "Failed to parse Integer from: " <> T.unpack $(varE rawVar) |]
+        ConT n | nameBase n == "Double" ->
+          [| case readMaybe (T.unpack $(varE rawVar)) of
+               Just parsed -> parsed
+               Nothing -> error $ "Failed to parse Double from: " <> T.unpack $(varE rawVar) |]
+        ConT n | nameBase n == "Float" ->
+          [| case readMaybe (T.unpack $(varE rawVar)) of
+               Just parsed -> parsed
+               Nothing -> error $ "Failed to parse Float from: " <> T.unpack $(varE rawVar) |]
+        ConT n | nameBase n == "Bool" ->
+          [| case T.toLower $(varE rawVar) of
+               "true" -> True
+               "false" -> False
+               _ -> error $ "Failed to parse Bool from: " <> T.unpack $(varE rawVar) |]
+        _ -> varE rawVar  -- Text or other types, use as-is
+
   if isOptional
-    then [| do
-        let $(varP fieldVar) = Map.lookup $(litE $ stringL fieldStr) (Map.fromList args)
-        $(return continuation) |]
-    else [| case Map.lookup $(litE $ stringL fieldStr) (Map.fromList args) of
-        Just $(varP fieldVar) -> $(return continuation)
-        Nothing -> pure $ Left $ MissingRequiredParams $ "field '" <> $(litE $ stringL fieldStr) <> "' is missing" |]
+    then do
+      rawFieldVar <- newName ("raw" ++ show depth)
+      convertedExpr <- convertExpr rawFieldVar
+      [| do
+          let $(varP fieldVar) = case Map.lookup $(litE $ stringL fieldStr) (Map.fromList args) of
+                Nothing                  -> Nothing
+                Just $(varP rawFieldVar) -> Just $(return convertedExpr)
+          $(return continuation) |]
+    else do
+      rawFieldVar <- newName ("raw" ++ show depth)
+      convertedExpr <- convertExpr rawFieldVar
+      [| case Map.lookup $(litE $ stringL fieldStr) (Map.fromList args) of
+          Just $(varP rawFieldVar) -> do
+            let $(varP fieldVar) = $(return convertedExpr)
+            $(return continuation)
+          Nothing -> pure $ Left $ MissingRequiredParams $ "field '" <> $(litE $ stringL fieldStr) <> "' is missing" |]
 
 -- | Derive resource handlers from a data type
 -- Usage: $(deriveResourceHandler ''MyResource 'handleResource)
@@ -135,7 +171,7 @@ deriveResourceHandler typeName handlerName = do
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate resource definitions
       resourceDefs <- sequence $ map mkResourceDef constructors
-      
+
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
         { paginatedItems = $(return $ ListE resourceDefs)
         , paginatedNextCursor = Nothing
@@ -145,9 +181,9 @@ deriveResourceHandler typeName handlerName = do
       cases <- sequence $ map (mkResourceCase handlerName) constructors
       defaultCase <- [| pure $ Left $ ResourceNotFound $ "Resource not found: " <> T.pack unknown |]
       let defaultMatch = Match (VarP (mkName "unknown")) (NormalB defaultCase) []
-      
+
       readHandlerExp <- return $ LamE [VarP (mkName "uri")] $
-        CaseE (AppE (VarE 'show) (VarE (mkName "uri"))) 
+        CaseE (AppE (VarE 'show) (VarE (mkName "uri")))
           (map clauseToMatch cases ++ [defaultMatch])
 
       return $ TupE [Just listHandlerExp, Just readHandlerExp]
@@ -183,7 +219,7 @@ deriveToolHandler typeName handlerName = do
     TyConI (DataD _ _ _ _ constructors _) -> do
       -- Generate tool definitions
       toolDefs <- sequence $ map mkToolDef constructors
-      
+
       listHandlerExp <- [| \_cursor -> pure $ PaginatedResult
         { paginatedItems = $(return $ ListE toolDefs)
         , paginatedNextCursor = Nothing
@@ -193,9 +229,9 @@ deriveToolHandler typeName handlerName = do
       cases <- sequence $ map (mkToolCase handlerName) constructors
       defaultCase <- [| pure $ Left $ UnknownTool $ "Unknown tool: " <> name |]
       let defaultMatch = Match WildP (NormalB defaultCase) []
-      
+
       callHandlerExp <- return $ LamE [VarP (mkName "name"), VarP (mkName "args")] $
-        CaseE (AppE (VarE 'T.unpack) (VarE (mkName "name"))) 
+        CaseE (AppE (VarE 'T.unpack) (VarE (mkName "name")))
           (map clauseToMatch cases ++ [defaultMatch])
 
       return $ TupE [Just listHandlerExp, Just callHandlerExp]
@@ -218,7 +254,7 @@ mkToolDef (RecC name fields) = do
   requiredFields <- return $ map (\(fieldName, _, fieldType) ->
     let isOptional = case fieldType of
           AppT (ConT n) _ -> nameBase n == "Maybe"
-          _ -> False
+          _               -> False
     in if isOptional then Nothing else Just (nameBase fieldName)
     ) fields
   let required = [f | Just f <- requiredFields]
@@ -233,10 +269,25 @@ mkToolDef (RecC name fields) = do
 mkToolDef _ = fail "Unsupported constructor type for tools"
 
 mkProperty :: (Name, Bang, Type) -> Q Exp
-mkProperty (fieldName, _, _) = do
+mkProperty (fieldName, _, fieldType) = do
   let fieldStr = nameBase fieldName
+  let jsonType = case fieldType of
+        ConT n | nameBase n == "Int" -> "integer"
+        ConT n | nameBase n == "Integer" -> "integer"
+        ConT n | nameBase n == "Double" -> "number"
+        ConT n | nameBase n == "Float" -> "number"
+        ConT n | nameBase n == "Bool" -> "boolean"
+        AppT (ConT maybeType) innerType | nameBase maybeType == "Maybe" ->
+          case innerType of
+            ConT n | nameBase n == "Int"     -> "integer"
+            ConT n | nameBase n == "Integer" -> "integer"
+            ConT n | nameBase n == "Double"  -> "number"
+            ConT n | nameBase n == "Float"   -> "number"
+            ConT n | nameBase n == "Bool"    -> "boolean"
+            _                                -> "string"
+        _ -> "string"
   [| ($(litE $ stringL fieldStr), InputSchemaDefinitionProperty
-      { propertyType = "string"
+      { propertyType = $(litE $ stringL jsonType)
       , propertyDescription = $(litE $ stringL fieldStr)
       }) |]
 

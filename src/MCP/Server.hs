@@ -7,6 +7,9 @@ module MCP.Server
   , runMcpServerStdIn
   , handleMcpMessage
 
+    -- * Utility Functions
+  , jsonValueToText
+
     -- * Re-exports
   , module MCP.Server.Types
   ) where
@@ -25,6 +28,19 @@ import           System.IO              (hFlush, hPutStrLn, stderr, stdout)
 import           MCP.Server.JsonRpc
 import           MCP.Server.Protocol
 import           MCP.Server.Types
+
+-- | Convert JSON Value to Text representation suitable for handlers
+jsonValueToText :: Value -> Text
+jsonValueToText (String t) = t
+jsonValueToText (Number n) = 
+    -- Check if it's a whole number, if so format as integer
+    if fromInteger (round n) == n
+        then T.pack $ show (round n :: Integer)
+        else T.pack $ show n
+jsonValueToText (Bool True) = "true"
+jsonValueToText (Bool False) = "false"
+jsonValueToText Null = ""
+jsonValueToText v = T.pack $ show v
 
 -- | Extract a brief summary of a JSON-RPC message for logging
 getMessageSummary :: JsonRpcMessage -> String
@@ -207,7 +223,7 @@ handlePromptsGet handlers req =
               , errorData = Nothing
               }
             Success getReq -> do
-              let args = maybe [] (map (\(k, v) -> (k, T.pack $ show v)) . Map.toList) (promptsGetArguments getReq)
+              let args = maybe [] (map (\(k, v) -> (k, jsonValueToText v)) . Map.toList) (promptsGetArguments getReq)
               result <- getHandler (promptsGetName getReq) args
               case result of
                 Left err -> return $ makeErrorResponse (requestId req) $ JsonRpcError
@@ -327,7 +343,7 @@ handleToolsCall handlers req =
               , errorData = Nothing
               }
             Success callReq -> do
-              let args = maybe [] (map (\(k, v) -> (k, T.pack $ show v)) . Map.toList) (toolsCallArguments callReq)
+              let args = maybe [] (map (\(k, v) -> (k, jsonValueToText v)) . Map.toList) (toolsCallArguments callReq)
               result <- callHandler (toolsCallName callReq) args
               case result of
                 Left err -> return $ makeErrorResponse (requestId req) $ JsonRpcError

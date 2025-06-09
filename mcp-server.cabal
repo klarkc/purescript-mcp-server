@@ -15,7 +15,7 @@ name: mcp-server
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version: 0.1.0.0
+version: 0.1.0.1
 -- A short (one-line) description of the package.
 synopsis: Library for building Model Context Protocol (MCP) servers
 -- A longer description of the package.
@@ -157,7 +157,7 @@ test-suite haskell-mcp-server-test
   -- Base language which the package is written in.
   default-language: GHC2024
   -- Modules included in this executable, other than Main.
-  -- other-modules:
+  other-modules: TestTypes
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
   -- The interface type and version of the test suite.
@@ -168,5 +168,11 @@ test-suite haskell-mcp-server-test
   main-is: Main.hs
   -- Test dependencies.
   build-depends:
+    aeson >=2.0 && <3.0,
     base ^>=4.20.0.0,
+    containers >=0.6 && <0.8,
     mcp-server,
+    network-uri >=2.6 && <2.8,
+    QuickCheck >=2.14 && <2.16,
+    template-haskell >=2.16 && <2.23,
+    text >=1.2 && <3.0,
