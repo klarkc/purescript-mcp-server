@@ -4,10 +4,11 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 
 ## Features
 
-- **Complete MCP Implementation**: Full support for MCP 2024-11-05 specification
+- **Complete MCP Implementation**: Designed against the MCP 2024-11-05 server specification
 - **Type-Safe API**: Leverage Haskell's type system for robust MCP servers
 - **Multiple Abstractions**: Both low-level fine-grained control and high-level derived interfaces
 - **Template Haskell Support**: Automatic handler derivation from data types
+- **Stdio Transport Only**: HTTP/SSE coming soon!
 
 ## Supported MCP Features
 
@@ -16,7 +17,6 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 - ✅ **Tools**: Model-controlled callable functions
 - ✅ **Initialization Flow**: Complete protocol lifecycle with version negotiation
 - ✅ **Error Handling**: Comprehensive error types and JSON-RPC error responses
-- ✅ **Capabilities**: Proper capability negotiation with sub-capabilities
 
 ## Quick Start
 
@@ -116,7 +116,7 @@ main = runMcpServerStdIn serverInfo handlers
 
 ## Examples
 
-The library includes complete examples:
+The library includes a few different examples:
 
 - **`examples/Simple/`**: Basic key-value store using Template Haskell derivation
 - **`examples/Complete/`**: Full-featured example with prompts, resources, and tools
@@ -130,8 +130,7 @@ I like to build and publish my MCP servers to Docker - which means that it's muc
 docker build -t haskell-mcp-server .
 
 # Run different examples
-docker run -i --entrypoint="/usr/local/bin/template-haskell-example" haskell-mcp-server
-docker run -i --entrypoint="/usr/local/bin/high-level-example" haskell-mcp-server
+docker run -i --entrypoint="/usr/local/bin/haskell-mcp-server" haskell-mcp-server
 ```
 
 And then configure Claude by editing `claude_desktop_config.json`:
@@ -144,8 +143,8 @@ And then configure Claude by editing `claude_desktop_config.json`:
             "args": [
                 "run",
                 "-i",
-                "--entrypoint=/usr/local/bin/template-haskell-example",
-                "drshade/haskell-mcp-server"
+                "--entrypoint=/usr/local/bin/haskell-mcp-server",
+                "haskell-mcp-server"
             ]
         }
     }
