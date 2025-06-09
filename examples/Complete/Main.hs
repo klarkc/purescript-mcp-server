@@ -28,9 +28,9 @@ handleTool (SearchForProduct q category) =
         Just cat -> pure $ ContentText $ "Search results for '" <> q <> "' in " <> cat <> ": Found 8 products"
 handleTool (AddToCart sku) = pure $ ContentText $ "Added item " <> sku <> " to your cart. Cart total: 3 items"
 handleTool Checkout = pure $ ContentText "Checkout completed! Order #12345 confirmed. Thank you for shopping with us!"
-handleTool (ComplexTool field1 field2 field3 field4 field5) = 
-    pure $ ContentText $ "Complex tool called with: " <> field1 <> ", " <> field2 <> 
-                        maybe "" (", " <>) field3 <> ", " <> field4 <> 
+handleTool (ComplexTool field1 field2 field3 field4 field5) =
+    pure $ ContentText $ "Complex tool called with: " <> field1 <> ", " <> field2 <>
+                        maybe "" (", " <>) field3 <> ", " <> field4 <>
                         maybe "" (", " <>) field5
 
 main :: IO ()
