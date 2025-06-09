@@ -35,19 +35,15 @@ handleTool (ComplexTool field1 field2 field3 field4 field5) =
 
 main :: IO ()
 main = do
-    hPutStrLn stderr "Starting Template Haskell MCP Server..."
-    hPutStrLn stderr "Using automatic Template Haskell derivation!"
-    hPutStrLn stderr "Ready for JSON-RPC communication"
-
     -- Derive the handlers using Template Haskell
     let prompts = $(derivePromptHandler ''MyPrompt 'handlePrompt)
         resources = $(deriveResourceHandler ''MyResource 'handleResource)
         tools = $(deriveToolHandler ''MyTool 'handleTool)
      in runMcpServerStdIn
         McpServerInfo
-            { serverName = "Template Haskell MCP Server"
+            { serverName = "Complete Example MCP Server"
             , serverVersion = "0.3.0"
-            , serverInstructions = "MCP server using Template Haskell for automatic handler derivation"
+            , serverInstructions = "An example MCP server that handles prompts, resources, and tools."
             }
         McpServerHandlers
             { prompts = Just prompts

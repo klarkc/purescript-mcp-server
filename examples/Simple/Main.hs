@@ -29,9 +29,6 @@ main = do
             writeIORef store newPairs
             pure $ ContentText $ "Set '" <> k <> "' to '" <> v <> "'"
 
-    hPutStrLn stderr "Using Template Haskell derivation for tools"
-    hPutStrLn stderr "Ready for JSON-RPC communication"
-
     -- Derive the tool handlers using Template Haskell with descriptions
     let tools = $(deriveToolHandlerWithDescription ''SimpleTool 'handleTool simpleDescriptions)
      in runMcpServerStdIn
@@ -41,7 +38,7 @@ main = do
             , serverInstructions = "A simple key-value store with GetValue and SetValue tools"
             }
         McpServerHandlers
-            { prompts = Nothing
-            , resources = Nothing
-            , tools = Just tools
+            { prompts = Nothing     -- No prompts in this example
+            , resources = Nothing   -- No resources in this example
+            , tools = Just tools    -- Only tools in this example
             }
