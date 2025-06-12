@@ -35,33 +35,20 @@ main = do
 
 The downside of this approach is the reliance on field accessors in the constructor records, e.g. "key" and "value" are technically partial functions and prone to issues.
 
-Although these are OK for small examples (and are nice and easy to understand), the better and more acceptable approach in haskell is to rather introduce additional data types for each Constructor's parameters, e.g.:
-
-```haskell
--- Positional arguments
-data GetValueParams = GetValueParams Text
-data SetValueParams = SetValueParams Text Text
-
-data SimpleTool
-    = GetValue GetValueParams
-    | SetValue SetValueParams
-    deriving (Show, Eq)
-```
-
-Or potentially mixing and matching record fields here too:
+Although these are OK for small examples (and are nice and easy to understand), the better and more acceptable approach in haskell is to rather introduce additional data types for each Constructor's parameters (which must always be named fields), e.g.:
 
 ```haskell
 -- Using fields, but prefixing with the Type name, because maybe the user wants to use Lenses
 data GetValueParams = GetValueParams { _gvpKey :: Text }
 data SetValueParams = SetValueParams { _svpKey :: Text, _svpValue :: Text }
 
-makeLenses ''GetValueParams
-makeLenses ''SetValueParams
-
 data SimpleTool
     = GetValue GetValueParams
     | SetValue SetValueParams
     deriving (Show, Eq)
+
+makeLenses ''GetValueParams
+makeLenses ''SetValueParams
 ```
 
 This would then be reflected in the API like:
@@ -71,7 +58,7 @@ main :: IO ()
 main = do
     let handleTool :: SimpleTool -> IO Content
         handleTool (GetValue (GetValueParams key)) = pure $ ContentText "..."
-        handleTool (SetValue (SetValueParams k v)) = pure $ ContentText "..."
+        handleTool (SetValue (SetValueParams key value)) = pure $ ContentText "..."
 
     -- Derive the tool handlers using Template Haskell with descriptions
     let tools = $(deriveToolHandler ''SimpleTool 'handleTool)
@@ -88,10 +75,36 @@ main = do
             }
 ```
 
+e.g. this is NOT supported:
+
+```haskell
+-- Positional arguments
+data SimpleTool
+    = GetValue Int
+    | SetValue Int Text
+    deriving (Show, Eq)
+```
+
+and nor is this supported:
+
+```haskell
+-- Positional arguments
+data GetValueParams = GetValueParams Text
+data SetValueParams = SetValueParams Text Text
+
+data SimpleTool
+    = GetValue GetValueParams
+    | SetValue SetValueParams
+    deriving (Show, Eq)
+```
+
+Why? The challenge here is that although we can support the positional parameters, the Template Haskell will not be able to figure out their names and generates names such as "param0", "param1", etc. Whereas with record fields we can extract proper names such as "key", "value" etc (although they remain partial). Because we don't know what to name the parameters in the MCP definition and we want to avoid naming schemes like "param0", "param1", etc. This must be explicitly not supported.
+
 # Suggested approach to support parameter types
 
 update the `derivePromptHandler`, `deriveResourceHandler` and `deriveToolHandler` functions to allow for support for multiple constructor parameters:
 - record fields (current approach)
-- positional parameters, which could be either primitive types (String, Int, etc) or data types holding (and describing parameters). 
+- positional parameters, which must always be well-defined data types, which eventually end in record types (so we can generate a name).
+
 
 
