@@ -154,7 +154,13 @@ test-suite haskell-mcp-server-test
   -- Base language which the package is written in.
   default-language: GHC2024
   -- Modules included in this executable, other than Main.
-  other-modules: TestTypes
+  other-modules: 
+    TestTypes,
+    TestData,
+    Spec.JSONConversion,
+    Spec.BasicDerivation,
+    Spec.SchemaValidation,
+    Spec.AdvancedDerivation
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
   -- The interface type and version of the test suite.
@@ -162,14 +168,16 @@ test-suite haskell-mcp-server-test
   -- Directories containing source files.
   hs-source-dirs: test
   -- The entrypoint to the test suite.
-  main-is: Main.hs
+  main-is: HspecMain.hs
   -- Test dependencies.
   build-depends:
     QuickCheck >=2.14 && <2.16,
     aeson >=2.0 && <3.0,
     base ^>=4.20.0.0,
     containers >=0.6 && <0.8,
+    hspec >=2.7 && <2.12,
     mcp-server,
     network-uri >=2.6 && <2.8,
     template-haskell >=2.16 && <2.23,
     text >=1.2 && <3.0,
+
