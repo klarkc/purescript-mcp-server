@@ -146,6 +146,22 @@ testToolHandlers = $(deriveToolHandler ''TestTool 'handleTestTool)
 testToolHandlersWithDescriptions :: (ToolListHandler IO, ToolCallHandler IO)
 testToolHandlersWithDescriptions = $(deriveToolHandlerWithDescription ''TestTool 'handleTestTool testDescriptions)
 
+-- Test case for separate parameter types approach (should fail with current implementation)
+testSeparateParamsToolHandlers :: (ToolListHandler IO, ToolCallHandler IO)
+testSeparateParamsToolHandlers = $(deriveToolHandler ''SeparateParamsTool 'handleSeparateParamsTool)
+
+-- Test case for recursive parameter types
+testRecursiveToolHandlers :: (ToolListHandler IO, ToolCallHandler IO)
+testRecursiveToolHandlers = $(deriveToolHandler ''RecursiveTool 'handleRecursiveTool)
+
+-- Test case for separate parameter types with descriptions
+testSeparateParamsToolHandlersWithDescriptions :: (ToolListHandler IO, ToolCallHandler IO)
+testSeparateParamsToolHandlersWithDescriptions = $(deriveToolHandlerWithDescription ''SeparateParamsTool 'handleSeparateParamsTool separateParamsDescriptions)
+
+-- Test case for recursive parameter types with descriptions
+testRecursiveToolHandlersWithDescriptions :: (ToolListHandler IO, ToolCallHandler IO)
+testRecursiveToolHandlersWithDescriptions = $(deriveToolHandlerWithDescription ''RecursiveTool 'handleRecursiveTool separateParamsDescriptions)
+
 -- End-to-end test functions
 testPromptDerivation :: IO Bool
 testPromptDerivation = do
@@ -176,6 +192,120 @@ testPromptDerivation = do
             _ -> False
     
     return (test1 && test2 && test3 && test4)
+
+testSeparateParamsDerivation :: IO Bool
+testSeparateParamsDerivation = do
+    putStrLn "Testing separate parameter types derivation..."
+    
+    -- Test the separate parameter types approach
+    let (listHandler, callHandler) = testSeparateParamsToolHandlers
+    
+    -- First test that tool definitions are generated correctly
+    toolDefs <- listHandler
+    let getValueDef = filter (\def -> toolDefinitionName def == "get_value") toolDefs
+    let setValueDef = filter (\def -> toolDefinitionName def == "set_value") toolDefs
+    
+    let schemaTest = case (getValueDef, setValueDef) of
+            ([getDef], [setDef]) -> 
+                let getProps = case toolDefinitionInputSchema getDef of
+                        InputSchemaDefinitionObject props _ -> map fst props
+                    setProps = case toolDefinitionInputSchema setDef of  
+                        InputSchemaDefinitionObject props _ -> map fst props
+                in "_gvpKey" `elem` getProps && "_svpKey" `elem` setProps && "_svpValue" `elem` setProps
+            _ -> False
+    
+    putStrLn $ "  Schema generation: " ++ (if schemaTest then "PASS" else "FAIL")
+    
+    -- Test GetValue with separate params
+    result1 <- callHandler "get_value" [("_gvpKey", "mykey")]
+    let test1 = case result1 of
+            Right (ContentText content) -> content == "Getting value for key: mykey"
+            _ -> False
+    
+    putStrLn $ "  GetValue execution: " ++ (if test1 then "PASS" else "FAIL")
+    
+    -- Test SetValue with separate params  
+    result2 <- callHandler "set_value" [("_svpKey", "mykey"), ("_svpValue", "myvalue")]
+    let test2 = case result2 of
+            Right (ContentText content) -> content == "Setting mykey = myvalue"
+            _ -> False
+    
+    putStrLn $ "  SetValue execution: " ++ (if test2 then "PASS" else "FAIL")
+    
+    -- Test recursive parameter types
+    let (recursiveListHandler, recursiveCallHandler) = testRecursiveToolHandlers
+    recursiveToolDefs <- recursiveListHandler
+    let processDataDef = filter (\def -> toolDefinitionName def == "process_data") recursiveToolDefs
+    
+    let recursiveSchemaTest = case processDataDef of
+            [def] -> case toolDefinitionInputSchema def of
+                InputSchemaDefinitionObject props _ -> 
+                    let propNames = map fst props
+                    in "_ipName" `elem` propNames && "_ipAge" `elem` propNames
+            _ -> False
+    
+    putStrLn $ "  Recursive schema generation: " ++ (if recursiveSchemaTest then "PASS" else "FAIL")
+    
+    -- Test recursive execution
+    result3 <- recursiveCallHandler "process_data" [("_ipName", "Alice"), ("_ipAge", "30")]
+    let test3 = case result3 of
+            Right (ContentText content) -> content == "Processing data for Alice (age 30)"
+            _ -> False
+    
+    putStrLn $ "  Recursive execution: " ++ (if test3 then "PASS" else "FAIL")
+    
+    -- Test descriptions with separate parameter types
+    let (descListHandler, _) = testSeparateParamsToolHandlersWithDescriptions
+    descToolDefs <- descListHandler
+    let getValueDefWithDesc = filter (\def -> toolDefinitionName def == "get_value") descToolDefs
+    let setValueDefWithDesc = filter (\def -> toolDefinitionName def == "set_value") descToolDefs
+    
+    let descriptionTest = case (getValueDefWithDesc, setValueDefWithDesc) of
+            ([getDef], [setDef]) -> 
+                let getDefDescCorrect = toolDefinitionDescription getDef == "Retrieves a value from the key-value store"
+                    setDefDescCorrect = toolDefinitionDescription setDef == "Sets a value in the key-value store"
+                    getFieldDescsCorrect = case toolDefinitionInputSchema getDef of
+                        InputSchemaDefinitionObject props _ -> 
+                            case lookup "_gvpKey" props of
+                                Just prop -> propertyDescription prop == "The key to retrieve the value for"
+                                Nothing -> False
+                    setFieldDescsCorrect = case toolDefinitionInputSchema setDef of
+                        InputSchemaDefinitionObject props _ ->
+                            let keyDesc = case lookup "_svpKey" props of
+                                    Just prop -> propertyDescription prop == "The key to set the value for"
+                                    Nothing -> False
+                                valueDesc = case lookup "_svpValue" props of
+                                    Just prop -> propertyDescription prop == "The value to store"
+                                    Nothing -> False
+                            in keyDesc && valueDesc
+                in getDefDescCorrect && setDefDescCorrect && getFieldDescsCorrect && setFieldDescsCorrect
+            _ -> False
+    
+    putStrLn $ "  Description support: " ++ (if descriptionTest then "PASS" else "FAIL")
+    
+    -- Test recursive descriptions
+    let (recursiveDescListHandler, _) = testRecursiveToolHandlersWithDescriptions
+    recursiveDescToolDefs <- recursiveDescListHandler
+    let processDataDefWithDesc = filter (\def -> toolDefinitionName def == "process_data") recursiveDescToolDefs
+    
+    let recursiveDescTest = case processDataDefWithDesc of
+            [procDef] -> 
+                let procDefDescCorrect = toolDefinitionDescription procDef == "Processes user data with age validation"
+                    procFieldDescsCorrect = case toolDefinitionInputSchema procDef of
+                        InputSchemaDefinitionObject props _ ->
+                            let nameDesc = case lookup "_ipName" props of
+                                    Just prop -> propertyDescription prop == "The person's full name"
+                                    Nothing -> False
+                                ageDesc = case lookup "_ipAge" props of
+                                    Just prop -> propertyDescription prop == "The person's age in years"
+                                    Nothing -> False
+                            in nameDesc && ageDesc
+                in procDefDescCorrect && procFieldDescsCorrect
+            _ -> False
+    
+    putStrLn $ "  Recursive description support: " ++ (if recursiveDescTest then "PASS" else "FAIL")
+    
+    return (schemaTest && test1 && test2 && recursiveSchemaTest && test3 && descriptionTest && recursiveDescTest)
 
 testResourceDerivation :: IO Bool
 testResourceDerivation = do
@@ -315,7 +445,11 @@ runEndToEndTests = do
     descriptionResult <- testCustomDescriptions
     putStrLn $ if descriptionResult then "PASS" else "FAIL"
     
-    let allPassed = promptResult && resourceResult && toolResult && schemaResult && descriptionResult
+    putStr "Testing separate parameter types: "
+    separateParamsResult <- testSeparateParamsDerivation
+    putStrLn $ if separateParamsResult then "PASS" else "FAIL"
+    
+    let allPassed = promptResult && resourceResult && toolResult && schemaResult && descriptionResult && separateParamsResult
     putStrLn $ "End-to-End result: " ++ if allPassed then "PASS" else "FAIL"
     return allPassed
 

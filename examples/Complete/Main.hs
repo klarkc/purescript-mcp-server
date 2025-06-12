@@ -5,7 +5,6 @@ module Main where
 
 import           MCP.Server
 import           MCP.Server.Derive
-import           System.IO         (hPutStrLn, stderr)
 import           Types
 
 -- High-level handler functions

@@ -4,7 +4,6 @@
 module Main where
 
 import           Data.IORef
-import           Data.Text         (Text)
 import           MCP.Server
 import           MCP.Server.Derive
 import           System.IO         (hPutStrLn, stderr)

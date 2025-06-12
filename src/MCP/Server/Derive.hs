@@ -90,8 +90,36 @@ mkPromptDefWithDescription descriptions con =
           , promptDefinitionDescription = $(litE $ stringL description)
           , promptDefinitionArguments = $(return $ ListE args)
           } |]
+    NormalC name [(_bang, paramType)] -> do
+      -- Handle separate parameter types approach
+      let promptName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> "Handle " ++ constructorName
+      args <- extractFieldsFromType descriptions paramType
+      [| PromptDefinition
+          { promptDefinitionName = $(litE $ stringL $ T.unpack promptName)
+          , promptDefinitionDescription = $(litE $ stringL description)
+          , promptDefinitionArguments = $(return $ ListE args)
+          } |]
     _ -> fail "Unsupported constructor type"
 
+-- Extract field definitions from a parameter type recursively
+extractFieldsFromType :: [(String, String)] -> Type -> Q [Exp]
+extractFieldsFromType descriptions paramType = do
+  case paramType of
+    ConT typeName -> do
+      info <- reify typeName
+      case info of
+        TyConI (DataD _ _ _ _ [RecC _ fields] _) -> do
+          -- Parameter type is a record with fields
+          sequence $ map (mkArgDef descriptions) fields
+        TyConI (DataD _ _ _ _ [NormalC _ [(_bang, innerType)]] _) -> do
+          -- Parameter type has a single parameter - recurse
+          extractFieldsFromType descriptions innerType
+        _ -> fail $ "Parameter type " ++ show typeName ++ " must be a record type or single-parameter constructor"
+    _ -> fail $ "Parameter type must be a concrete type, got: " ++ show paramType
 
 mkArgDef :: [(String, String)] -> (Name, Bang, Type) -> Q Exp
 mkArgDef descriptions (fieldName, _, fieldType) = do
@@ -120,7 +148,109 @@ mkPromptCase handlerName (RecC name fields) = do
   let promptName = T.pack . toSnakeCase . nameBase $ name
   body <- mkRecordCase name handlerName fields
   clause [litP $ stringL $ T.unpack promptName] (normalB (return body)) []
+mkPromptCase handlerName (NormalC name [(_bang, paramType)]) = do
+  let promptName = T.pack . toSnakeCase . nameBase $ name
+  body <- mkSeparateParamsCase name handlerName paramType
+  clause [litP $ stringL $ T.unpack promptName] (normalB (return body)) []
 mkPromptCase _ _ = fail "Unsupported constructor type"
+
+mkSeparateParamsCase :: Name -> Name -> Type -> Q Exp
+mkSeparateParamsCase conName handlerName paramType = do
+  fields <- extractFieldsFromParamType paramType
+  buildNestedFieldValidationWithConstructor conName handlerName paramType fields 0
+  where
+    buildNestedFieldValidationWithConstructor :: Name -> Name -> Type -> [(Name, Bang, Type)] -> Int -> Q Exp
+    buildNestedFieldValidationWithConstructor outerConName handlerName' paramType' [] depth = do
+      -- Base case: all fields validated, build parameter constructor hierarchy and outer constructor
+      let fieldVars = [mkName ("field" ++ show i) | i <- [0..depth-1]]
+      paramConstructorApp <- buildParameterConstructor paramType' fieldVars
+      let outerConstructorApp = AppE (ConE outerConName) paramConstructorApp
+      [| do
+          content <- $(varE handlerName') $(return outerConstructorApp)
+          pure $ Right content |]
+    
+    buildNestedFieldValidationWithConstructor outerConName handlerName' paramType' ((fieldName, _, fieldType):remainingFields) depth = do
+      let fieldStr = nameBase fieldName
+      let (isOptional, innerType) = case fieldType of
+            AppT (ConT n) inner | nameBase n == "Maybe" -> (True, inner)
+            other                                       -> (False, other)
+      let fieldVar = mkName ("field" ++ show depth)
+
+      continuation <- buildNestedFieldValidationWithConstructor outerConName handlerName' paramType' remainingFields (depth + 1)
+
+      -- Generate conversion expression based on type
+      let convertExpr rawVar = case innerType of
+            ConT n | nameBase n == "Int" ->
+              [| case readMaybe (T.unpack $(varE rawVar)) of
+                   Just parsed -> parsed
+                   Nothing -> error $ "Failed to parse Int from: " <> T.unpack $(varE rawVar) |]
+            ConT n | nameBase n == "Integer" ->
+              [| case readMaybe (T.unpack $(varE rawVar)) of
+                   Just parsed -> parsed
+                   Nothing -> error $ "Failed to parse Integer from: " <> T.unpack $(varE rawVar) |]
+            ConT n | nameBase n == "Double" ->
+              [| case readMaybe (T.unpack $(varE rawVar)) of
+                   Just parsed -> parsed
+                   Nothing -> error $ "Failed to parse Double from: " <> T.unpack $(varE rawVar) |]
+            ConT n | nameBase n == "Float" ->
+              [| case readMaybe (T.unpack $(varE rawVar)) of
+                   Just parsed -> parsed
+                   Nothing -> error $ "Failed to parse Float from: " <> T.unpack $(varE rawVar) |]
+            ConT n | nameBase n == "Bool" ->
+              [| case T.toLower $(varE rawVar) of
+                   "true" -> True
+                   "false" -> False
+                   _ -> error $ "Failed to parse Bool from: " <> T.unpack $(varE rawVar) |]
+            _ -> varE rawVar  -- Text or other types, use as-is
+
+      if isOptional
+        then do
+          rawFieldVar <- newName ("raw" ++ show depth)
+          convertedExpr <- convertExpr rawFieldVar
+          [| do
+              let $(varP fieldVar) = case Map.lookup $(litE $ stringL fieldStr) (Map.fromList args) of
+                    Nothing                  -> Nothing
+                    Just $(varP rawFieldVar) -> Just $(return convertedExpr)
+              $(return continuation) |]
+        else do
+          rawFieldVar <- newName ("raw" ++ show depth)
+          convertedExpr <- convertExpr rawFieldVar
+          [| case Map.lookup $(litE $ stringL fieldStr) (Map.fromList args) of
+              Just $(varP rawFieldVar) -> do
+                let $(varP fieldVar) = $(return convertedExpr)
+                $(return continuation)
+              Nothing -> pure $ Left $ MissingRequiredParams $ "field '" <> $(litE $ stringL fieldStr) <> "' is missing" |]
+
+-- Extract field information from parameter type
+extractFieldsFromParamType :: Type -> Q [(Name, Bang, Type)]
+extractFieldsFromParamType paramType = do
+  case paramType of
+    ConT typeName -> do
+      info <- reify typeName
+      case info of
+        TyConI (DataD _ _ _ _ [RecC _ fields] _) -> 
+          return fields
+        TyConI (DataD _ _ _ _ [NormalC _ [(_bang, innerType)]] _) -> 
+          extractFieldsFromParamType innerType
+        _ -> fail $ "Parameter type " ++ show typeName ++ " must be a record type or single-parameter constructor"
+    _ -> fail $ "Parameter type must be a concrete type, got: " ++ show paramType
+
+-- Build the parameter constructor application recursively
+buildParameterConstructor :: Type -> [Name] -> Q Exp
+buildParameterConstructor paramType fieldVars = do
+  case paramType of
+    ConT typeName -> do
+      info <- reify typeName
+      case info of
+        TyConI (DataD _ _ _ _ [RecC conName _] _) -> do
+          -- Record constructor - apply all field variables
+          return $ foldl AppE (ConE conName) (map VarE fieldVars)
+        TyConI (DataD _ _ _ _ [NormalC conName [(_bang, innerType)]] _) -> do
+          -- Single parameter constructor - recurse and wrap
+          innerConstructor <- buildParameterConstructor innerType fieldVars
+          return $ AppE (ConE conName) innerConstructor
+        _ -> fail $ "Parameter type " ++ show typeName ++ " must be a record type or single-parameter constructor"
+    _ -> fail $ "Parameter type must be a concrete type, got: " ++ show paramType
 
 mkRecordCase :: Name -> Name -> [(Name, Bang, Type)] -> Q Exp
 mkRecordCase conName handlerName fields = do
@@ -321,6 +451,30 @@ mkToolDefWithDescription descriptions con =
               , required = $(return $ ListE $ map (LitE . StringL) required)
               }
           } |]
+    NormalC name [(_bang, paramType)] -> do
+      -- Handle separate parameter types approach for tools
+      let toolName = T.pack . toSnakeCase . nameBase $ name
+      let constructorName = nameBase name
+      let description = case lookup constructorName descriptions of
+            Just desc -> desc
+            Nothing   -> constructorName
+      fields <- extractFieldsFromParamType paramType
+      props <- sequence $ map (mkProperty descriptions) fields
+      requiredFields <- return $ map (\(fieldName, _, fieldType) ->
+        let isOptional = case fieldType of
+              AppT (ConT n) _ -> nameBase n == "Maybe"
+              _               -> False
+        in if isOptional then Nothing else Just (nameBase fieldName)
+        ) fields
+      let required = [f | Just f <- requiredFields]
+      [| ToolDefinition
+          { toolDefinitionName = $(litE $ stringL $ T.unpack toolName)
+          , toolDefinitionDescription = $(litE $ stringL description)
+          , toolDefinitionInputSchema = InputSchemaDefinitionObject
+              { properties = $(return $ ListE props)
+              , required = $(return $ ListE $ map (LitE . StringL) required)
+              }
+          } |]
     _ -> fail "Unsupported constructor type for tools"
 
 
@@ -361,5 +515,9 @@ mkToolCase handlerName (NormalC name []) = do
 mkToolCase handlerName (RecC name fields) = do
   let toolName = T.pack . toSnakeCase . nameBase $ name
   body <- mkRecordCase name handlerName fields
+  clause [litP $ stringL $ T.unpack toolName] (normalB (return body)) []
+mkToolCase handlerName (NormalC name [(_bang, paramType)]) = do
+  let toolName = T.pack . toSnakeCase . nameBase $ name
+  body <- mkSeparateParamsCase name handlerName paramType
   clause [litP $ stringL $ T.unpack toolName] (normalB (return body)) []
 mkToolCase _ _ = fail "Unsupported constructor type for tools"

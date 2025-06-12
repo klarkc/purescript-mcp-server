@@ -70,6 +70,33 @@ main = runMcpServerStdIn serverInfo handlers
       }
 ```
 
+### Nestable data types
+
+You can also nest your data types, but MUST always end in a record with named fields:
+
+```haskell
+-- Using fields, but prefixing with the Type name, because maybe the user wants to use Lenses
+data GetValueParams = GetValueParams { _gvpKey :: Text }
+data SetValueParams = SetValueParams { _svpKey :: Text, _svpValue :: Text }
+
+data SimpleTool
+    = GetValue GetValueParams
+    | SetValue SetValueParams
+    deriving (Show, Eq)
+```
+
+Which is probably nicer for using things like Lenses etc. However we do not support positional (and unnamed) parameters such as:
+
+```haskell
+-- Positional arguments
+data SimpleTool
+    = GetValue Int
+    | SetValue Int Text
+    deriving (Show, Eq)
+```
+
+Because we don't want to be generating names when returning details in MCP definitions.
+
 ## Custom Descriptions
 
 You can provide custom descriptions for constructors and fields using the `*WithDescription` variants:
