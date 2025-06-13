@@ -6,6 +6,11 @@ module MCP.Server.Types
     Content(..)
   , ContentImageData(..)
   , ContentResourceData(..)
+  , ResourceContent(..)
+
+    -- * URI Utilities  
+  , parseURI
+  , URI
 
     -- * Error Types
   , Error(..)
@@ -49,7 +54,7 @@ import           Data.Maybe       (catMaybes)
 import           Data.Text        (Text)
 import qualified Data.Text        as T
 import           GHC.Generics     (Generic)
-import           Network.URI      (URI)
+import           Network.URI      (URI, parseURI)
 
 type PromptName = Text
 type ToolName = Text
@@ -106,6 +111,47 @@ data ContentResourceData = ContentResourceData
   { contentResourceUri      :: URI
   , contentResourceMimeType :: Maybe Text
   } deriving (Show, Eq, Generic)
+
+-- | Resource content compliant with MCP specification
+-- Must include uri and mimeType, with either text or blob data
+data ResourceContent
+  = ResourceText
+      { resourceUri :: URI
+      , resourceMimeType :: Text
+      , resourceText :: Text
+      }
+  | ResourceBlob
+      { resourceUri :: URI
+      , resourceMimeType :: Text
+      , resourceBlob :: Text  -- base64 encoded
+      }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ResourceContent where
+  toJSON (ResourceText uri mimeType text) = object
+    [ "uri" .= show uri
+    , "mimeType" .= mimeType
+    , "text" .= text
+    ]
+  toJSON (ResourceBlob uri mimeType blob) = object
+    [ "uri" .= show uri
+    , "mimeType" .= mimeType
+    , "blob" .= blob
+    ]
+
+instance FromJSON ResourceContent where
+  parseJSON = withObject "ResourceContent" $ \o -> do
+    uriText <- o .: "uri"
+    mimeType <- o .: "mimeType"
+    case parseURI uriText of
+      Nothing -> fail "Invalid URI"
+      Just uri -> do
+        maybeText <- o .:? "text"
+        maybeBlob <- o .:? "blob"
+        case (maybeText, maybeBlob) of
+          (Just text, Nothing) -> return $ ResourceText uri mimeType text
+          (Nothing, Just blob) -> return $ ResourceBlob uri mimeType blob
+          _ -> fail "ResourceContent must have either 'text' or 'blob' field"
 
 -- | MCP protocol errors
 data Error
@@ -293,7 +339,7 @@ type PromptListHandler m = m [PromptDefinition]
 type PromptGetHandler m = PromptName -> [(ArgumentName, ArgumentValue)] -> m (Either Error Content)
 
 type ResourceListHandler m = m [ResourceDefinition]
-type ResourceReadHandler m = URI -> m (Either Error Content)
+type ResourceReadHandler m = URI -> m (Either Error ResourceContent)
 
 type ToolListHandler m = m [ToolDefinition]
 type ToolCallHandler m = ToolName -> [(ArgumentName, ArgumentValue)] -> m (Either Error Content)

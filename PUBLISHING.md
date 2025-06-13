@@ -9,6 +9,7 @@ version: <new version>
 Then ensure the whole package builds:
 
 ```
+cabal update
 cabal clean
 cabal build
 cabal test

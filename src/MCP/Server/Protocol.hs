@@ -39,7 +39,7 @@ module MCP.Server.Protocol
 import Data.Text (Text)
 import Data.Aeson
 import Data.Map (Map)
-import Network.URI (URI, parseURI)
+import Network.URI (URI)
 import GHC.Generics (Generic)
 import MCP.Server.Types
 
@@ -189,7 +189,7 @@ instance FromJSON ResourcesReadRequest where
 
 -- | Resources read response
 data ResourcesReadResponse = ResourcesReadResponse
-  { resourcesReadContents :: [Content]
+  { resourcesReadContents :: [ResourceContent]
   } deriving (Show, Eq, Generic)
 
 instance ToJSON ResourcesReadResponse where

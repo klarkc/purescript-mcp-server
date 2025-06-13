@@ -15,10 +15,13 @@ handlePrompt (Recipe idea) =
 handlePrompt (Shopping description) =
     pure $ ContentText $ "Shopping prompt for " <> description <> ": Create a detailed shopping list..."
 
-handleResource :: MyResource -> IO Content
-handleResource ProductCategories = pure $ ContentText "Fresh Produce, Dairy, Bakery, Meat & Seafood, Frozen Foods"
-handleResource SaleItems = pure $ ContentText "Organic Apples $2.99/lb, Free Range Eggs $4.50/dozen, Artisan Bread $3.25/loaf"
-handleResource HeadlineBannerAd = pure $ ContentText "🛒 Weekly Special: 20% off all organic produce! 🥕🥬🍎"
+handleResource :: URI -> MyResource -> IO ResourceContent
+handleResource uri ProductCategories =
+    pure $ ResourceText uri "text/plain" "Fresh Produce, Dairy, Bakery, Meat & Seafood, Frozen Foods"
+handleResource uri SaleItems =
+    pure $ ResourceText uri "text/plain" "Organic Apples $2.99/lb, Free Range Eggs $4.50/dozen, Artisan Bread $3.25/loaf"
+handleResource uri HeadlineBannerAd =
+    pure $ ResourceText uri "text/plain" "🛒 Weekly Special: 20% off all organic produce! 🥕🥬🍎"
 
 handleTool :: MyTool -> IO Content
 handleTool (SearchForProduct q category) =

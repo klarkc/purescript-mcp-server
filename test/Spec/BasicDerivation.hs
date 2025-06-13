@@ -46,7 +46,12 @@ testPromptCall handler name args expected =
 testResourceCall :: ResourceReadHandler IO -> String -> Text -> IO ()
 testResourceCall handler uriString expected = do
   case parseURI uriString of
-    Just uri -> shouldReturnContentText (handler uri) expected
+    Just uri -> do
+      result <- handler uri
+      case result of
+        Right (ResourceText _ _ content) -> content `shouldBe` expected
+        Right (ResourceBlob _ _ _) -> expectationFailure "Expected ResourceText but got ResourceBlob"
+        Left err -> expectationFailure $ "Expected success but got error: " ++ show err
     Nothing -> expectationFailure $ "Failed to parse URI: " ++ uriString
 
 testToolCall :: ToolCallHandler IO -> Text -> [(Text, Text)] -> Text -> IO ()
@@ -68,12 +73,18 @@ spec = describe "Basic Template Haskell Derivation" $ do
     
     forM_ resourceTestCases $ \testCase ->
       it (T.unpack $ resourceTestDescription testCase) $ do
-        case parseURI (T.unpack $ resourceUri testCase) of
+        case parseURI (T.unpack $ TestData.resourceUri testCase) of
           Just uri -> 
             if useSubstringMatch testCase
-              then shouldContainText (readHandler uri) (resourceExpectedContent testCase)
-              else testResourceCall readHandler (T.unpack $ resourceUri testCase) (resourceExpectedContent testCase)
-          Nothing -> expectationFailure $ "Failed to parse URI: " ++ T.unpack (resourceUri testCase)
+              then do
+                result <- readHandler uri
+                case result of
+                  Right (ResourceText _ _ content) -> 
+                    T.isInfixOf (resourceExpectedContent testCase) content `shouldBe` True
+                  Right (ResourceBlob _ _ _) -> expectationFailure "Expected ResourceText but got ResourceBlob"
+                  Left err -> expectationFailure $ "Expected success but got error: " ++ show err
+              else testResourceCall readHandler (T.unpack $ TestData.resourceUri testCase) (resourceExpectedContent testCase)
+          Nothing -> expectationFailure $ "Failed to parse URI: " ++ T.unpack (TestData.resourceUri testCase)
 
   describe "Tool derivation" $ do
     let (_, callHandler) = testToolHandlers

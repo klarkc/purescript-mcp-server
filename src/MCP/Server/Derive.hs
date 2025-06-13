@@ -378,7 +378,7 @@ mkResourceCase handlerName (NormalC name []) = do
   let resourceName = T.pack . toSnakeCase . nameBase $ name
   let resourceURI = "resource://" <> T.unpack resourceName
   clause [litP $ stringL resourceURI]
-    (normalB [| Right <$> $(varE handlerName) $(conE name) |])
+    (normalB [| $(varE handlerName) $(varE (mkName "uri")) $(conE name) >>= pure . Right |])
     []
 mkResourceCase _ _ = fail "Unsupported constructor type for resources"
 

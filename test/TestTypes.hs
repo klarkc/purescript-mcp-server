@@ -4,7 +4,8 @@ module TestTypes where
 
 import           Data.Text  (Text)
 import qualified Data.Text  as T
-import           MCP.Server (Content(..))
+import           MCP.Server (Content(..), ResourceContent(..), parseURI)
+import           Network.URI (URI)
 
 -- Test data types for end-to-end testing
 data TestPrompt
@@ -54,13 +55,13 @@ handleTestPrompt (ComplexPrompt title prio urgent) =
 handleTestPrompt (OptionalPrompt req opt) = 
     pure $ ContentText $ "Optional prompt: " <> req <> maybe "" ((" optional=" <>) . T.pack . show) opt
 
-handleTestResource :: TestResource -> IO Content
-handleTestResource ConfigFile = 
-    pure $ ContentText "Config file contents: debug=true, timeout=30"
-handleTestResource DatabaseConnection = 
-    pure $ ContentText "Database at localhost:5432"
-handleTestResource UserProfile = 
-    pure $ ContentText "User profile for ID 123"
+handleTestResource :: URI -> TestResource -> IO ResourceContent
+handleTestResource uri ConfigFile = 
+    pure $ ResourceText uri "text/plain" "Config file contents: debug=true, timeout=30"
+handleTestResource uri DatabaseConnection = 
+    pure $ ResourceText uri "text/plain" "Database at localhost:5432"
+handleTestResource uri UserProfile = 
+    pure $ ResourceText uri "text/plain" "User profile for ID 123"
 
 handleTestTool :: TestTool -> IO Content
 handleTestTool (Echo text) = 

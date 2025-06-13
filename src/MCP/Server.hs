@@ -279,9 +279,9 @@ handleResourcesRead handlers req =
                   , errorMessage = errorMessageFromMcpError err
                   , errorData = Nothing
                   }
-                Right content -> do
+                Right resourceContent -> do
                   let response = ResourcesReadResponse
-                        { resourcesReadContents = [content]
+                        { resourcesReadContents = [resourceContent]
                         }
                   return $ makeSuccessResponse (requestId req) (toJSON response)
 
