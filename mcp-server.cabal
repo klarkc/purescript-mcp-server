@@ -15,7 +15,7 @@ name: mcp-server
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version: 0.1.0.8
+version: 0.1.0.9
 -- A short (one-line) description of the package.
 synopsis: Library for building Model Context Protocol (MCP) servers
 -- A longer description of the package.
@@ -74,11 +74,11 @@ library
   -- Other library packages from which modules are imported.
   build-depends:
     aeson >=2.0 && <3.0,
-    base ^>=4.20.0.0,
+    base >=4.20.0 && <4.22,
     bytestring >=0.10 && <0.13,
     containers >=0.6 && <0.8,
     network-uri >=2.6 && <2.8,
-    template-haskell >=2.16 && <2.23,
+    template-haskell >=2.16 && <2.24,
     text >=1.2 && <3.0,
 
   -- Directories containing source files.
@@ -97,11 +97,11 @@ executable haskell-mcp-server
   -- other-extensions:
   -- Other library packages from which modules are imported.
   build-depends:
-    base ^>=4.20.0.0,
-    containers >=0.6 && <0.8,
+    base,
+    containers,
     mcp-server,
-    network-uri >=2.6 && <2.8,
-    text >=1.2 && <3.0,
+    network-uri,
+    text,
 
   -- Directories containing source files.
   hs-source-dirs: app
@@ -119,9 +119,9 @@ executable simple-example
   -- other-extensions:
   -- Other library packages from which modules are imported.
   build-depends:
-    base ^>=4.20.0.0,
+    base,
     mcp-server,
-    text >=1.2 && <3.0,
+    text,
 
   -- Directories containing source files.
   hs-source-dirs: examples/Simple
@@ -139,9 +139,9 @@ executable complete-example
   -- other-extensions:
   -- Other library packages from which modules are imported.
   build-depends:
-    base ^>=4.20.0.0,
+    base,
     mcp-server,
-    text >=1.2 && <3.0,
+    text,
 
   -- Directories containing source files.
   hs-source-dirs: examples/Complete
@@ -154,13 +154,14 @@ test-suite haskell-mcp-server-test
   -- Base language which the package is written in.
   default-language: GHC2024
   -- Modules included in this executable, other than Main.
-  other-modules: 
-    TestTypes,
-    TestData,
-    Spec.JSONConversion,
-    Spec.BasicDerivation,
-    Spec.SchemaValidation,
+  other-modules:
     Spec.AdvancedDerivation
+    Spec.BasicDerivation
+    Spec.JSONConversion
+    Spec.SchemaValidation
+    TestData
+    TestTypes
+
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
   -- The interface type and version of the test suite.
@@ -171,13 +172,12 @@ test-suite haskell-mcp-server-test
   main-is: HspecMain.hs
   -- Test dependencies.
   build-depends:
-    QuickCheck >=2.14 && <2.16,
-    aeson >=2.0 && <3.0,
-    base ^>=4.20.0.0,
-    containers >=0.6 && <0.8,
-    hspec >=2.7 && <2.12,
+    QuickCheck,
+    aeson,
+    base,
+    containers,
+    hspec,
     mcp-server,
-    network-uri >=2.6 && <2.8,
-    template-haskell >=2.16 && <2.23,
-    text >=1.2 && <3.0,
-
+    network-uri,
+    template-haskell,
+    text,
