@@ -4,11 +4,11 @@ A fully-featured Haskell library for building [Model Context Protocol (MCP)](htt
 
 ## Features
 
-- **Complete MCP Implementation**: Designed against the MCP 2024-11-05 server specification
+- **Complete MCP Implementation**: Supports MCP 2025-03-26 specification (with backward compatibility for 2024-11-05)
 - **Type-Safe API**: Leverage Haskell's type system for robust MCP servers
 - **Multiple Abstractions**: Both low-level fine-grained control and high-level derived interfaces
 - **Template Haskell Support**: Automatic handler derivation from data types
-- **Stdio Transport Only**: HTTP/SSE coming soon!
+- **Multiple Transports**: STDIO and HTTP Streaming transport (MCP 2025-03-26 Streamable HTTP)
 
 ## Supported MCP Features
 
@@ -141,12 +141,41 @@ main = runMcpServerStdIn serverInfo handlers
       }
 ```
 
+## HTTP Transport (NEW!)
+
+The library now supports MCP 2025-03-26 Streamable HTTP transport:
+
+```haskell
+import MCP.Server.Transport.Http
+
+-- Simple HTTP server (localhost:3000/mcp)
+main = runMcpServerHttp serverInfo handlers
+
+-- Custom configuration
+main = runMcpServerHttpWithConfig customConfig serverInfo handlers
+  where
+    customConfig = HttpConfig
+      { httpPort = 8080
+      , httpHost = "0.0.0.0"
+      , httpEndpoint = "/api/mcp"
+      , httpVerbose = True  -- Enable detailed logging
+      }
+```
+
+**Features:**
+- JSON-RPC batching support
+- CORS enabled for web clients  
+- GET `/mcp` for server discovery
+- POST `/mcp` for JSON-RPC messages
+- Full MCP 2025-03-26 compliance
+
 ## Examples
 
-The library includes a few different examples:
+The library includes several examples:
 
-- **`examples/Simple/`**: Basic key-value store using Template Haskell derivation
-- **`examples/Complete/`**: Full-featured example with prompts, resources, and tools
+- **`examples/Simple/`**: Basic key-value store using Template Haskell derivation (STDIO)
+- **`examples/Complete/`**: Full-featured example with prompts, resources, and tools (STDIO)
+- **`examples/HttpSimple/`**: HTTP version of the simple key-value store
 
 ## Docker Usage
 

@@ -15,7 +15,7 @@ name: mcp-server
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version: 0.1.0.10
+version: 0.1.0.11
 -- A short (one-line) description of the package.
 synopsis: Library for building Model Context Protocol (MCP) servers
 -- A longer description of the package.
@@ -63,9 +63,13 @@ library
   exposed-modules:
     MCP.Server
     MCP.Server.Derive
+    MCP.Server.Handlers
     MCP.Server.JsonRpc
     MCP.Server.Protocol
     MCP.Server.Types
+    MCP.Server.Transport.Types
+    MCP.Server.Transport.Stdio
+    MCP.Server.Transport.Http
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -77,9 +81,13 @@ library
     base >=4.20.0 && <4.22,
     bytestring >=0.10 && <0.13,
     containers >=0.6 && <0.8,
+    http-types >=0.12 && <1.0,
     network-uri >=2.6 && <2.8,
     template-haskell >=2.16 && <2.24,
     text >=1.2 && <3.0,
+    vector >=0.12 && <1.0,
+    wai >=3.2 && <4.0,
+    warp >=3.3 && <4.0,
 
   -- Directories containing source files.
   hs-source-dirs: src
@@ -145,6 +153,26 @@ executable complete-example
 
   -- Directories containing source files.
   hs-source-dirs: examples/Complete
+  -- Base language which the package is written in.
+  default-language: GHC2024
+
+executable http-simple-example
+  -- Import common warning flags.
+  import: warnings
+  -- .hs or .lhs file containing the Main module.
+  main-is: Main.hs
+  -- Modules included in this executable, other than Main.
+  other-modules: Types
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:
+  -- Other library packages from which modules are imported.
+  build-depends:
+    base,
+    mcp-server,
+    text,
+
+  -- Directories containing source files.
+  hs-source-dirs: examples/HttpSimple
   -- Base language which the package is written in.
   default-language: GHC2024
 
