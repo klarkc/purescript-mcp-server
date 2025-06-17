@@ -70,32 +70,69 @@ main = runMcpServerStdio serverInfo handlers
       }
 ```
 
-### Nestable data types
+### Advanced Template Haskell Features
 
-You can also nest your data types, but MUST always end in a record with named fields:
+#### Automatic Naming Conventions
+
+Constructor names are automatically converted to snake_case for MCP names:
 
 ```haskell
--- Using fields, but prefixing with the Type name, because maybe the user wants to use Lenses
+data MyTool = GetValue | SetValue | SearchItems
+-- Becomes: "get_value", "set_value", "search_items"
+```
+
+#### Automatic Type Conversion
+
+The derivation system automatically converts Text arguments to appropriate Haskell types:
+
+```haskell
+data MyTool = Calculate { number :: Int, factor :: Double, enabled :: Bool }
+-- Text "42" -> Int 42
+-- Text "3.14" -> Double 3.14  
+-- Text "true" -> Bool True
+```
+
+Supported conversions: `Int`, `Integer`, `Double`, `Float`, `Bool`, and `Text` (no conversion).
+
+#### Nested Parameter Types
+
+You can nest parameter types with automatic unwrapping:
+
+```haskell
+-- Parameter record types
 data GetValueParams = GetValueParams { _gvpKey :: Text }
 data SetValueParams = SetValueParams { _svpKey :: Text, _svpValue :: Text }
 
+-- Main tool type
 data SimpleTool
     = GetValue GetValueParams
     | SetValue SetValueParams
     deriving (Show, Eq)
 ```
 
-Which is probably nicer for using things like Lenses etc. However we do not support positional (and unnamed) parameters such as:
+The Template Haskell derivation recursively unwraps single-parameter constructors until it reaches a record type, then extracts all fields for the MCP schema.
+
+#### Resource URI Generation
+
+Resources automatically get `resource://` URIs based on constructor names:
 
 ```haskell
--- Positional arguments
+data MyResource = Menu | Specials
+-- Generates: "resource://menu", "resource://specials"
+```
+
+#### Unsupported Patterns
+
+We do not support positional (unnamed) parameters:
+
+```haskell
+-- ❌ This won't work - no field names
 data SimpleTool
     = GetValue Int
     | SetValue Int Text
-    deriving (Show, Eq)
 ```
 
-Because we don't want to be generating names when returning details in MCP definitions.
+All parameter types must ultimately resolve to records with named fields to generate proper MCP schemas.
 
 ## Custom Descriptions
 
