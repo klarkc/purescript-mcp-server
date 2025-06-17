@@ -6,11 +6,15 @@ module Main where
 import           Data.IORef
 import           MCP.Server
 import           MCP.Server.Derive
-import           System.IO         (hPutStrLn, stderr)
+import           System.IO         (hPutStrLn, hSetEncoding, stderr, stdout, utf8)
 import           Types
 
 main :: IO ()
 main = do
+    -- Set UTF-8 encoding to handle Unicode characters properly
+    hSetEncoding stdout utf8
+    hSetEncoding stderr utf8
+    
     hPutStrLn stderr "Starting Simple MCP Server..."
 
     -- Create a simple in-memory store
@@ -30,7 +34,7 @@ main = do
 
     -- Derive the tool handlers using Template Haskell with descriptions
     let tools = $(deriveToolHandlerWithDescription ''SimpleTool 'handleTool simpleDescriptions)
-     in runMcpServerStdIn
+     in runMcpServerStdio
         McpServerInfo
             { serverName = "Simple Key-Value MCP Server"
             , serverVersion = "1.0.0"

@@ -128,7 +128,7 @@ handleCallTool tool _ = pure $ Left $ UnknownTool $ tool <> " unknown!"
 
 main :: IO ()
 main =
-    runMcpServerStdIn
+    runMcpServerStdio
         McpServerInfo
             { serverName = "Products available at your Grocery Store"
             , serverVersion = "0.1.0"
@@ -185,7 +185,7 @@ main =
     let prompts = $(derivePromptHandler ''MyPrompt 'handlePrompt)
         resources = $(deriveResourceHandler ''MyResource 'handleResource)
         tools = $(deriveToolHandler ''MyTool 'handleTool)
-     in runMcpServerStdIn
+     in runMcpServerStdio
         McpServerInfo
             { serverName = "Products available at your Grocery Store"
             , serverVersion = "0.1.0"

@@ -56,7 +56,7 @@ handleTool (Order item) = pure $ ContentText $ "Ordered " <> item
 
 -- Derive handlers automatically
 main :: IO ()
-main = runMcpServerStdIn serverInfo handlers
+main = runMcpServerStdio serverInfo handlers
   where
     serverInfo = McpServerInfo
       { serverName = "My MCP Server"
@@ -132,7 +132,7 @@ promptGetHandler :: PromptName -> [(ArgumentName, ArgumentValue)] -> IO (Either 
 -- ... implement your custom logic
 
 main :: IO ()
-main = runMcpServerStdIn serverInfo handlers
+main = runMcpServerStdio serverInfo handlers
   where
     handlers = McpServerHandlers
       { prompts = Just (promptListHandler, promptGetHandler)

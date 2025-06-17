@@ -3,13 +3,12 @@
 
 module MCP.Server
   ( -- * Server Runtime
-    runMcpServerStdIn
-  , runMcpServerWithTransport
+    runMcpServerStdio
+  , runMcpServerHttp
+  , runMcpServerHttpWithConfig
 
-    -- * Transport Support
-  , module MCP.Server.Transport.Types
-  , module MCP.Server.Transport.Stdio
-  , module MCP.Server.Transport.Http
+    -- * Transport Configuration
+  , HttpConfig(..)
 
     -- * Utility Functions
   , jsonValueToText
@@ -23,9 +22,8 @@ import           Data.Aeson
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 
-import           MCP.Server.Transport.Types
-import           MCP.Server.Transport.Stdio
-import           MCP.Server.Transport.Http
+import           MCP.Server.Transport.Stdio (transportRunStdio)
+import           MCP.Server.Transport.Http (HttpConfig(..), transportRunHttp, defaultHttpConfig)
 import           MCP.Server.Types
 
 -- | Convert JSON Value to Text representation suitable for handlers
@@ -41,19 +39,15 @@ jsonValueToText (Bool False) = "false"
 jsonValueToText Null = ""
 jsonValueToText v = T.pack $ show v
 
--- | Run an MCP server with a specific transport
-runMcpServerWithTransport :: (MonadIO m, McpTransport t) 
-                         => t                      -- ^ Transport configuration  
-                         -> McpServerInfo          -- ^ Server information
-                         -> McpServerHandlers m    -- ^ Message handlers
-                         -> m TransportResult      -- ^ Result of transport operation
-runMcpServerWithTransport transport serverInfo handlers = 
-  runTransport transport serverInfo handlers
+-- | Run an MCP server using STDIO transport
+runMcpServerStdio :: McpServerInfo -> McpServerHandlers IO -> IO ()
+runMcpServerStdio serverInfo handlers = transportRunStdio serverInfo handlers
 
+-- | Run an MCP server using HTTP transport with default configuration
+runMcpServerHttp :: McpServerInfo -> McpServerHandlers IO -> IO ()
+runMcpServerHttp serverInfo handlers = transportRunHttp defaultHttpConfig serverInfo handlers
 
--- | Run an MCP server using stdin/stdout
-runMcpServerStdIn :: McpServerInfo -> McpServerHandlers IO -> IO ()
-runMcpServerStdIn serverInfo handlers = do
-  _ <- runMcpServerWithTransport StdioTransport serverInfo handlers
-  return ()
+-- | Run an MCP server using HTTP transport with custom configuration
+runMcpServerHttpWithConfig :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> IO ()
+runMcpServerHttpWithConfig config serverInfo handlers = transportRunHttp config serverInfo handlers
 

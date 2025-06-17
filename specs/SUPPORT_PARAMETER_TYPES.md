@@ -20,7 +20,7 @@ main = do
 
     -- Derive the tool handlers using Template Haskell with descriptions
     let tools = $(deriveToolHandler ''SimpleTool 'handleTool)
-     in runMcpServerStdIn
+     in runMcpServerStdio
         McpServerInfo
             { serverName = "Simple Key-Value MCP Server"
             , serverVersion = "1.0.0"
@@ -62,7 +62,7 @@ main = do
 
     -- Derive the tool handlers using Template Haskell with descriptions
     let tools = $(deriveToolHandler ''SimpleTool 'handleTool)
-     in runMcpServerStdIn
+     in runMcpServerStdio
         McpServerInfo
             { serverName = "Simple Key-Value MCP Server"
             , serverVersion = "1.0.0"

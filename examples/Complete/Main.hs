@@ -5,6 +5,7 @@ module Main where
 
 import           MCP.Server
 import           MCP.Server.Derive
+import           System.IO (hSetEncoding, stderr, stdout, utf8)
 import           Types
 
 -- High-level handler functions
@@ -37,11 +38,14 @@ handleTool (ComplexTool field1 field2 field3 field4 field5) =
 
 main :: IO ()
 main = do
+    -- Set UTF-8 encoding to handle Unicode characters properly
+    hSetEncoding stdout utf8
+    hSetEncoding stderr utf8
     -- Derive the handlers using Template Haskell
     let prompts = $(derivePromptHandler ''MyPrompt 'handlePrompt)
         resources = $(deriveResourceHandler ''MyResource 'handleResource)
         tools = $(deriveToolHandler ''MyTool 'handleTool)
-     in runMcpServerStdIn
+     in runMcpServerStdio
         McpServerInfo
             { serverName = "Complete Example MCP Server"
             , serverVersion = "0.3.0"

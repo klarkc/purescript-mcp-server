@@ -3,10 +3,9 @@
 
 module MCP.Server.Transport.Http
   ( -- * HTTP Transport
-    HttpTransport(..)
-  , HttpConfig(..)
-  , runMcpServerHttp
-  , runMcpServerHttpWithConfig
+    HttpConfig(..)
+  , transportRunHttp
+  , defaultHttpConfig
   ) where
 
 import           Control.Monad            (when)
@@ -43,24 +42,14 @@ defaultHttpConfig = HttpConfig
   , httpVerbose = False
   }
 
--- | HTTP transport following MCP 2025-03-26 Streamable HTTP specification
-data HttpTransport = HttpTransport HttpConfig
-  deriving (Show, Eq)
-
--- Note: HTTP transport is constrained to IO only due to Warp requirements
--- For the generic interface, we'll use a more specific function
-
 -- | Helper for conditional logging
 logVerbose :: HttpConfig -> String -> IO ()
 logVerbose config msg = when (httpVerbose config) $ hPutStrLn stderr msg
 
--- | Run an MCP server using HTTP transport with default config
-runMcpServerHttp :: McpServerInfo -> McpServerHandlers IO -> IO ()
-runMcpServerHttp = runMcpServerHttpWithConfig defaultHttpConfig
 
--- | Run an MCP server using HTTP transport with custom config
-runMcpServerHttpWithConfig :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> IO ()
-runMcpServerHttpWithConfig config serverInfo handlers = do
+-- | Transport-specific implementation for HTTP
+transportRunHttp :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> IO ()
+transportRunHttp config serverInfo handlers = do
   let settings = Warp.setHost (fromString $ httpHost config) $
                  Warp.setPort (httpPort config) $
                  Warp.defaultSettings

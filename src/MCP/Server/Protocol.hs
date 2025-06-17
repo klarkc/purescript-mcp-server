@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module MCP.Server.Protocol
@@ -8,7 +8,7 @@ module MCP.Server.Protocol
   , InitializedNotification(..)
   , PingRequest(..)
   , PongResponse(..)
-  
+
     -- * Prompts Protocol
   , PromptsListRequest(..)
   , PromptsListResponse(..)
@@ -16,32 +16,31 @@ module MCP.Server.Protocol
   , PromptsGetResponse(..)
   , PromptMessage(..)
   , MessageRole(..)
-  
+
     -- * Resources Protocol
   , ResourcesListRequest(..)
   , ResourcesListResponse(..)
   , ResourcesReadRequest(..)
   , ResourcesReadResponse(..)
-  
+
     -- * Tools Protocol
   , ToolsListRequest(..)
   , ToolsListResponse(..)
   , ToolsCallRequest(..)
   , ToolsCallResponse(..)
-  
+
     -- * Common Types
   , ListChangedNotification(..)
-  
+
     -- * Protocol Functions
   , protocolVersion
   ) where
 
-import Data.Text (Text)
-import Data.Aeson
-import Data.Map (Map)
-import Network.URI (URI)
-import GHC.Generics (Generic)
-import MCP.Server.Types
+import           Data.Aeson
+import           Data.Map         (Map)
+import           Data.Text        (Text)
+import           GHC.Generics     (Generic)
+import           MCP.Server.Types
 
 protocolVersion :: Text
 protocolVersion = "2025-03-26"
@@ -50,8 +49,8 @@ protocolVersion = "2025-03-26"
 -- | Initialize request
 data InitializeRequest = InitializeRequest
   { initProtocolVersion :: Text
-  , initCapabilities :: Value
-  , initClientInfo :: Value
+  , initCapabilities    :: Value
+  , initClientInfo      :: Value
   } deriving (Show, Eq, Generic)
 
 instance FromJSON InitializeRequest where
@@ -63,8 +62,8 @@ instance FromJSON InitializeRequest where
 -- | Initialize response
 data InitializeResponse = InitializeResponse
   { initRespProtocolVersion :: Text
-  , initRespCapabilities :: ServerCapabilities
-  , initRespServerInfo :: McpServerInfo
+  , initRespCapabilities    :: ServerCapabilities
+  , initRespServerInfo      :: McpServerInfo
   } deriving (Show, Eq, Generic)
 
 instance ToJSON InitializeResponse where
@@ -104,12 +103,12 @@ data MessageRole = RoleUser | RoleAssistant
   deriving (Show, Eq, Generic)
 
 instance ToJSON MessageRole where
-  toJSON RoleUser = "user"
+  toJSON RoleUser      = "user"
   toJSON RoleAssistant = "assistant"
 
 -- | Prompt message
 data PromptMessage = PromptMessage
-  { promptMessageRole :: MessageRole
+  { promptMessageRole    :: MessageRole
   , promptMessageContent :: Content
   } deriving (Show, Eq, Generic)
 
@@ -138,7 +137,7 @@ instance ToJSON PromptsListResponse where
 
 -- | Prompts get request
 data PromptsGetRequest = PromptsGetRequest
-  { promptsGetName :: Text
+  { promptsGetName      :: Text
   , promptsGetArguments :: Maybe (Map Text Value)
   } deriving (Show, Eq, Generic)
 
@@ -150,7 +149,7 @@ instance FromJSON PromptsGetRequest where
 -- | Prompts get response
 data PromptsGetResponse = PromptsGetResponse
   { promptsGetDescription :: Maybe Text
-  , promptsGetMessages :: [PromptMessage]
+  , promptsGetMessages    :: [PromptMessage]
   } deriving (Show, Eq, Generic)
 
 instance ToJSON PromptsGetResponse where
@@ -185,7 +184,7 @@ instance FromJSON ResourcesReadRequest where
     uriText <- o .: "uri"
     case parseURI uriText of
       Just uri -> return $ ResourcesReadRequest uri
-      Nothing -> fail "Invalid URI"
+      Nothing  -> fail "Invalid URI"
 
 -- | Resources read response
 data ResourcesReadResponse = ResourcesReadResponse
@@ -216,7 +215,7 @@ instance ToJSON ToolsListResponse where
 
 -- | Tools call request
 data ToolsCallRequest = ToolsCallRequest
-  { toolsCallName :: Text
+  { toolsCallName      :: Text
   , toolsCallArguments :: Maybe (Map Text Value)
   } deriving (Show, Eq, Generic)
 

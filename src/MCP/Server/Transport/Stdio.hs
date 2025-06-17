@@ -3,8 +3,7 @@
 
 module MCP.Server.Transport.Stdio
   ( -- * STDIO Transport
-    StdioTransport(..)
-  , runMcpServerStdio
+    transportRunStdio
   ) where
 
 import           Control.Monad          (when)
@@ -18,22 +17,12 @@ import           System.IO              (hFlush, hPutStrLn, stderr, stdout)
 
 import           MCP.Server.Handlers
 import           MCP.Server.JsonRpc
-import           MCP.Server.Transport.Types
 import           MCP.Server.Types
 
--- | STDIO transport configuration
-data StdioTransport = StdioTransport
-  deriving (Show, Eq)
 
-instance McpTransport StdioTransport where
-  runTransport StdioTransport serverInfo handlers = do
-    runMcpServerStdio serverInfo handlers
-    return $ TransportResult True Nothing
-
-
--- | Run an MCP server using STDIO transport
-runMcpServerStdio :: (MonadIO m) => McpServerInfo -> McpServerHandlers m -> m ()
-runMcpServerStdio serverInfo handlers = do
+-- | Transport-specific implementation for STDIO
+transportRunStdio :: (MonadIO m) => McpServerInfo -> McpServerHandlers m -> m ()
+transportRunStdio serverInfo handlers = do
   loop
   where
     loop = do
@@ -56,4 +45,5 @@ runMcpServerStdio serverInfo handlers = do
                     liftIO $ hFlush stdout
                   Nothing -> liftIO $ hPutStrLn stderr $ "No response needed for: " ++ show (getMessageSummary message)
         loop
+
 

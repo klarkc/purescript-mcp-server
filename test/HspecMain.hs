@@ -7,6 +7,7 @@ import qualified Spec.JSONConversion
 import qualified Spec.BasicDerivation
 import qualified Spec.SchemaValidation
 import qualified Spec.AdvancedDerivation
+import qualified Spec.UnicodeHandling
 
 main :: IO ()
 main = hspec $ do
@@ -15,3 +16,4 @@ main = hspec $ do
     Spec.BasicDerivation.spec
     Spec.SchemaValidation.spec
     Spec.AdvancedDerivation.spec
+    Spec.UnicodeHandling.spec
