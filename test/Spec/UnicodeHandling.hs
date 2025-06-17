@@ -3,16 +3,16 @@
 module Spec.UnicodeHandling (spec) where
 
 import           Data.Aeson
-import qualified Data.Aeson.KeyMap      as KM
-import qualified Data.Text              as T
-import qualified Data.Text.Encoding     as TE
-import qualified Data.ByteString.Lazy   as BSL
+import qualified Data.Aeson.KeyMap    as KM
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text            as T
+import qualified Data.Text.Encoding   as TE
 import           MCP.Server.Protocol
 import           MCP.Server.Types
-import           System.IO              (hSetEncoding, stderr, stdout, utf8)
+import           System.IO            (hSetEncoding, stderr, stdout, utf8)
 import           Test.Hspec
 
-spec :: Spec  
+spec :: Spec
 spec = describe "Unicode Handling" $ do
   describe "Unicode in Content Types" $ do
     it "handles Unicode in ContentText" $ do
@@ -29,7 +29,7 @@ spec = describe "Unicode Handling" $ do
 
     it "handles Unicode in ResourceContent" $ do
       uri <- case parseURI "test://unicode" of
-        Just u -> return u
+        Just u  -> return u
         Nothing -> fail "Invalid URI"
       let resource = ResourceText uri "text/plain" "Unicode content: ∀x∈ℝ: √x²=|x|"
       let json = toJSON resource
@@ -55,10 +55,10 @@ spec = describe "Unicode Handling" $ do
       let decoded = eitherDecode encoded
       case decoded of
         Right decodedContent -> decodedContent `shouldBe` originalContent
-        Left err -> expectationFailure $ "Failed to decode: " ++ err
+        Left err             -> expectationFailure $ "Failed to decode: " ++ err
 
     it "handles Unicode in JSON-RPC messages" $ do
-      let response = ToolsCallResponse 
+      let response = ToolsCallResponse
             { toolsCallContent = [ContentText "Result: √16 = 4, π ≈ 3.14159"]
             , toolsCallIsError = Nothing
             }
@@ -83,7 +83,7 @@ spec = describe "Unicode Handling" $ do
 
   describe "Protocol Messages with Unicode" $ do
     it "handles Unicode in tool responses" $ do
-      let response = ToolsCallResponse 
+      let response = ToolsCallResponse
             { toolsCallContent = [ContentText "Mathematical result: √(π²+e²) ≈ 4.53"]
             , toolsCallIsError = Nothing
             }
@@ -108,7 +108,7 @@ spec = describe "Unicode Handling" $ do
       case json of
         Object obj -> case KM.lookup "message" obj of
           Just (String msg) -> "√" `T.isInfixOf` msg `shouldBe` True
-          _ -> expectationFailure "Expected message field"
+          _                 -> expectationFailure "Expected message field"
         _ -> expectationFailure "Expected Object"
 
   describe "Manual Handler Tests with Unicode" $ do
@@ -151,9 +151,9 @@ spec = describe "Unicode Handling" $ do
               else return $ Left $ ResourceNotFound $ T.pack uriStr
 
       uri <- case parseURI "resource://unicode_test" of
-        Just u -> return u
+        Just u  -> return u
         Nothing -> fail "Invalid URI"
-      
+
       result <- resourceHandler uri
       case result of
         Right (ResourceText _ _ txt) -> do
@@ -165,13 +165,13 @@ spec = describe "Unicode Handling" $ do
     it "handles complete Unicode workflow without Template Haskell" $ do
       -- Create manual handlers with Unicode content
       let promptListHandler = return [
-            PromptDefinition 
+            PromptDefinition
               { promptDefinitionName = "math_formula"
               , promptDefinitionDescription = "Generate mathematical formulas with Unicode: ∀∃∈√"
               , promptDefinitionArguments = [ArgumentDefinition "formula" "Mathematical expression" True]
               }
             ]
-      
+
       let promptGetHandler name args = case name of
             "math_formula" -> case lookup "formula" args of
               Just formula -> return $ Right $ ContentText $ "Formula: " <> formula <> " → √(solution)"
@@ -187,7 +187,7 @@ spec = describe "Unicode Handling" $ do
               }
             ]
 
-      let resourceReadHandler uri = 
+      let resourceReadHandler uri =
             if show uri == "resource://unicode_symbols"
               then return $ Right $ ResourceText uri "text/plain" "Symbols: ∀∃∈∉∪∩⊆⊇√∑∏∞≤≥≠≈π∅"
               else return $ Left $ ResourceNotFound $ T.pack $ show uri
@@ -232,7 +232,7 @@ spec = describe "Unicode Handling" $ do
         _ -> expectationFailure "Expected successful prompt result"
 
       uri <- case parseURI "resource://unicode_symbols" of
-        Just u -> return u
+        Just u  -> return u
         Nothing -> fail "Invalid URI"
       resourceResult <- snd (case resources handlers of Just h -> h; Nothing -> error "No resources") uri
       case resourceResult of

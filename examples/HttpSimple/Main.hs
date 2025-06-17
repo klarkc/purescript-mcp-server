@@ -6,15 +6,11 @@ module Main where
 import           Data.IORef
 import           MCP.Server
 import           MCP.Server.Derive
-import           System.IO         (hPutStrLn, hSetEncoding, stderr, stdout, utf8)
+import           System.IO         (hPutStrLn, stderr)
 import           Types
 
 main :: IO ()
 main = do
-    -- Set UTF-8 encoding to handle Unicode characters properly
-    hSetEncoding stdout utf8
-    hSetEncoding stderr utf8
-    
     hPutStrLn stderr "Starting HTTP Simple MCP Server..."
 
     -- Create a simple in-memory store
