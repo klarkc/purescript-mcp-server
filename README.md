@@ -200,7 +200,6 @@ main = runMcpServerHttpWithConfig customConfig serverInfo handlers
 ```
 
 **Features:**
-- JSON-RPC batching support
 - CORS enabled for web clients  
 - GET `/mcp` for server discovery
 - POST `/mcp` for JSON-RPC messages

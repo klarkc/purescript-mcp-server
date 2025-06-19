@@ -15,7 +15,6 @@ import           Data.String              (IsString (fromString))
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import qualified Data.Text.Encoding       as TE
-import qualified Data.Vector              as V
 import           Network.HTTP.Types
 import qualified Network.Wai              as Wai
 import qualified Network.Wai.Handler.Warp as Warp
@@ -113,7 +112,7 @@ handleMcpRequest config serverInfo handlers req respond = do
       [("Content-Type", "text/plain"), ("Allow", "GET, POST, OPTIONS")]
       "Method Not Allowed"
 
--- | Handle JSON-RPC request from HTTP body (supports batching)
+-- | Handle JSON-RPC request from HTTP body
 handleJsonRpcRequest :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> BSL.ByteString -> (Wai.Response -> IO Wai.ResponseReceived) -> IO Wai.ResponseReceived
 handleJsonRpcRequest config serverInfo handlers body respond = do
   case eitherDecode body of
@@ -124,11 +123,7 @@ handleJsonRpcRequest config serverInfo handlers body respond = do
         [("Content-Type", "application/json")]
         (encode $ object ["error" .= ("Invalid JSON" :: Text)])
 
-    Right jsonValue -> do
-      -- Try to parse as batch first (array), then as single message
-      case jsonValue of
-        Array batch -> handleJsonRpcBatch config serverInfo handlers (V.toList batch) respond
-        singleValue -> handleSingleJsonRpc config serverInfo handlers singleValue respond
+    Right jsonValue -> handleSingleJsonRpc config serverInfo handlers jsonValue respond
 
 -- | Handle a single JSON-RPC message
 handleSingleJsonRpc :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> Value -> (Wai.Response -> IO Wai.ResponseReceived) -> IO Wai.ResponseReceived
@@ -162,40 +157,4 @@ handleSingleJsonRpc config serverInfo handlers jsonValue respond = do
             [("Content-Type", "application/json"), ("Access-Control-Allow-Origin", "*")] 
             "{}"
 
--- | Handle JSON-RPC batch request (MCP 2025-03-26 feature)
-handleJsonRpcBatch :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> [Value] -> (Wai.Response -> IO Wai.ResponseReceived) -> IO Wai.ResponseReceived
-handleJsonRpcBatch config serverInfo handlers batch respond = do
-  logVerbose config $ "Processing JSON-RPC batch with " ++ show (length batch) ++ " messages"
-
-  -- Process each message in the batch
-  responses <- mapM (processBatchMessage config serverInfo handlers) batch
-
-  -- Filter out Nothing responses (notifications)
-  let validResponses = [r | Just r <- responses]
-
-  case validResponses of
-    [] -> do
-      logVerbose config "Batch contained only notifications, returning empty JSON array"
-      respond $ Wai.responseLBS 
-        status200 
-        [("Content-Type", "application/json"), ("Access-Control-Allow-Origin", "*")] 
-        "[]"
-    _ -> do
-      let responseJson = encode $ map encodeJsonRpcMessage validResponses
-      logVerbose config $ "Sending batch response with " ++ show (length validResponses) ++ " responses"
-      respond $ Wai.responseLBS
-        status200
-        [("Content-Type", "application/json"), ("Access-Control-Allow-Origin", "*")]
-        responseJson
-
--- | Process a single message from a batch
-processBatchMessage :: HttpConfig -> McpServerInfo -> McpServerHandlers IO -> Value -> IO (Maybe JsonRpcMessage)
-processBatchMessage config serverInfo handlers jsonValue = do
-  case parseJsonRpcMessage jsonValue of
-    Left err -> do
-      logVerbose config $ "Batch message parse error: " ++ err
-      return Nothing -- Skip invalid messages in batch
-    Right message -> do
-      logVerbose config $ "Processing batch message: " ++ show (getMessageSummary message)
-      handleMcpMessage serverInfo handlers message
 
