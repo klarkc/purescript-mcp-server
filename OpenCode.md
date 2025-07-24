@@ -2,6 +2,11 @@
 
 This document outlines the conventions and commands for the `purescript-mcp-server` Haskell project.
 
+## Nix Commands
+
+- **Build with Nix**: `nix build`
+- **Enter Nix develop shell**: `nix develop`
+
 ## Build/Lint/Test Commands
 
 - **Build all components**: `cabal build all`
