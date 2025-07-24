@@ -77,7 +77,7 @@ library
   -- Other library packages from which modules are imported.
   build-depends:
     aeson >=2.0 && <3.0,
-    base >=4.20.0 && <4.22,
+    base >=4.19.0 && <4.22,
     bytestring >=0.10 && <0.13,
     containers >=0.6 && <0.9,
     http-types >=0.12 && <1.0,
@@ -91,7 +91,7 @@ library
   -- Directories containing source files.
   hs-source-dirs: src
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable haskell-mcp-server
   -- Import common warning flags.
@@ -113,7 +113,7 @@ executable haskell-mcp-server
   -- Directories containing source files.
   hs-source-dirs: app
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable simple-example
   -- Import common warning flags.
@@ -133,7 +133,7 @@ executable simple-example
   -- Directories containing source files.
   hs-source-dirs: examples/Simple
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable complete-example
   -- Import common warning flags.
@@ -153,7 +153,7 @@ executable complete-example
   -- Directories containing source files.
   hs-source-dirs: examples/Complete
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 executable http-simple-example
   -- Import common warning flags.
@@ -173,13 +173,13 @@ executable http-simple-example
   -- Directories containing source files.
   hs-source-dirs: examples/HttpSimple
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
 
 test-suite haskell-mcp-server-test
   -- Import common warning flags.
   import: warnings
   -- Base language which the package is written in.
-  default-language: GHC2024
+  default-language: GHC2021
   -- Modules included in this executable, other than Main.
   other-modules:
     Spec.AdvancedDerivation
